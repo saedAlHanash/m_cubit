@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/cupertino.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../abstraction.dart';
@@ -33,13 +34,17 @@ var _version = 1;
 
 var time = 60;
 
+void Function(dynamic second)? onErrorFun;
+
 class CachingService {
   static Future<void> initial({
     int? version,
     int? timeInterval,
+    required Function(dynamic second)? onError,
   }) async {
     _version = version ?? 1;
     time = timeInterval ?? 180;
+    onErrorFun = onError;
     await Hive.initFlutter();
   }
 

@@ -137,7 +137,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     required dynamic state,
     required Function getDataApi,
     bool newData = false,
-    void Function(dynamic state)? onError,
+    void Function(dynamic second)? onError,
     void Function(dynamic data, CubitStatuses emitState)? onSuccess,
   }) async {
     final checkData = await checkCashed(
@@ -160,6 +160,8 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
       final s = state.copyWith(statuses: CubitStatuses.error, error: pair.second);
 
       emit(s);
+
+      onErrorFun?.call(pair.second);
 
       onError?.call(pair.second);
 
