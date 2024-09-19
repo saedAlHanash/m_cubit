@@ -60,7 +60,6 @@ extension McubitStringH on String {
     // var digest1 = sha1.convert(bytes);
     var digest2 = hashCode.toString();
 
-    // loggerObject.w('${digest} \n$digest1\n$digest2 ');
     return '$digest2'.maxLength(10);
   }
 }

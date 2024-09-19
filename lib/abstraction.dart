@@ -27,13 +27,13 @@ abstract class AbstractState<T> extends Equatable {
   });
 
   bool get loading => statuses == CubitStatuses.loading;
+
   bool get done => statuses == CubitStatuses.done;
 
   bool get isDataEmpty =>
       (statuses != CubitStatuses.loading) &&
-          (result is List) &&
-          ((result as List).isEmpty);
-
+      (result is List) &&
+      ((result as List).isEmpty);
 }
 
 abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
@@ -52,7 +52,6 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
   }
 
   Future<void> storeData(dynamic data) async {
-    loggerObject.f(filter);
     await CachingService.sortData(this, data: data);
   }
 
@@ -68,7 +67,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     required T Function(Map<String, dynamic>) fromJson,
   }) async {
     final data = await CachingService.getList(this);
-
+    if (data.isEmpty) return [];
     return data.map((e) {
       try {
         return fromJson(e);
@@ -78,7 +77,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     }).toList();
   }
 
-  Future<T> getDataCached<T>({
+  Future<T> _getDataCached<T>({
     required T Function(Map<String, dynamic>) fromJson,
   }) async {
     final json = await CachingService.getData(this);
@@ -108,7 +107,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
       if (state.result is List) {
         data = await getListCached(fromJson: fromJson);
       } else {
-        data = await getDataCached(fromJson: fromJson);
+        data = await _getDataCached(fromJson: fromJson);
       }
 
       if (onSuccess != null) {
@@ -161,12 +160,10 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
 
       emit(s);
 
-      onErrorFun?.call(pair.second);
+      onErrorFun?.call(s);
 
       onError?.call(pair.second);
-
     } else {
-
       await storeData(pair.first);
 
       if (onSuccess != null) {

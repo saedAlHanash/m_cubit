@@ -54,6 +54,8 @@ class FilterRequest {
     return jsonEncode(this).getKey;
   }
 
+  FilterOrderBy? findOrderKey(String id) =>
+      orderBy.firstWhereOrNull((e) => e.attribute == id)?.direction;
 }
 
 class Filter {

@@ -1,16 +1,10 @@
-import 'dart:convert';
-
-import 'package:flutter/cupertino.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-
-import '../abstraction.dart';
-
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:logger/logger.dart';
 
+import '../abstraction.dart';
 import '../util.dart';
 
 var loggerObject = Logger(
@@ -59,25 +53,29 @@ class CachingService {
     required dynamic data,
   }) async {
     await updateLatestUpdateBox(mCubit.nameCache);
+    final box = await mCubit.box;
 
-    final haveId = _getIdParam(data).isNotEmpty;
+    final id = _getIdParam(data);
+    final haveId = id.isNotEmpty;
 
     final key = CacheKey(
       id: '',
+      sort: 0,
       filter: mCubit.filter,
       version: _version,
     );
 
-    final box = await mCubit.box;
-
     if (data is Iterable) {
-      await clearKeysId(box: box, filter: key);
-      final map = <dynamic, String>{};
+      await clearKeysId(box: box, key: key);
 
+      final map = <dynamic, String>{};
+      var i = 0;
       for (var e in data) {
+        i++;
+
         final id = haveId ? _getIdParam(e) : '';
 
-        final keyString = key.copyWith(id: id).jsonString;
+        final keyString = key.copyWith(id: id, sort: i).jsonString;
 
         map[keyString] = jsonEncode(e);
       }
@@ -87,7 +85,7 @@ class CachingService {
       return;
     }
 
-    final keyString = key.copyWith(id: haveId ? _getIdParam(data) : '').jsonString;
+    final keyString = key.copyWith(id: id).jsonString;
 
     await box.put(keyString, jsonEncode(data));
   }
@@ -96,8 +94,12 @@ class CachingService {
     MCubit mCubit, {
     required List<dynamic> data,
   }) async {
-    final key =
-        CacheKey(id: getIdFromData(data), filter: mCubit.filter, version: _version);
+    final key = CacheKey(
+      id: getIdFromData(data),
+      filter: mCubit.filter,
+      version: _version,
+      sort: 0,
+    );
 
     if (key.id.isEmpty) return null;
 
@@ -119,7 +121,6 @@ class CachingService {
     return await getList(mCubit);
   }
 
-//{\"i\":\"5ec010ec-a9ba-41ae-9360-08dcd0c07c0f\",\"f\":\"\",\"v\":6}
   static Future<Iterable<dynamic>?> delete(
     MCubit mCubit, {
     required List<String> ids,
@@ -139,9 +140,9 @@ class CachingService {
 
   static Future<void> clearKeysId({
     required Box<String> box,
-    required CacheKey filter,
+    required CacheKey key,
   }) async {
-    final keys = box.keys.where((e) => jsonDecode(e)['f'] == filter.filter);
+    final keys = box.keys.where((e) => jsonDecode(e)['f'] == key.filter);
 
     await box.deleteAll(keys);
   }
@@ -151,14 +152,14 @@ class CachingService {
 
     final listKeys = await _findKey(mCubit);
 
-    return listKeys.map((e) => jsonDecode(box.get(e) ?? '{}'));
+    return listKeys.map((i) => jsonDecode(box.getAt(i) ?? '{}'));
   }
 
   static Future<dynamic> getData(MCubit mCubit) async {
     final box = await mCubit.box;
     final listKeys = await _findKey(mCubit, firstFound: true);
 
-    return listKeys.map((e) => jsonDecode(box.get(e) ?? '{}')).firstOrNull;
+    return listKeys.map((i) => jsonDecode(box.getAt(i) ?? '{}')).firstOrNull;
   }
 
   static Future<Box<String>> getBox(String name) async {
@@ -167,11 +168,12 @@ class CachingService {
         : await Hive.openBox<String>(name);
   }
 
-  static Future<List<String>> _findKey(MCubit mCubit, {bool firstFound = false}) async {
+  static Future<List<int>> _findKey(MCubit mCubit, {bool firstFound = false}) async {
     final box = await mCubit.box;
 
     final listKeys = box.keys.toList();
-    final list = <String>[];
+
+    final myMap = <int, int>{};
 
     for (var i = 0; i < listKeys.length; i++) {
       try {
@@ -185,7 +187,7 @@ class CachingService {
         }
 
         if (keyCache.filter == mCubit.filter) {
-          list.add(listKeys[i]);
+          myMap[i] = keyCache.sort;
           if (firstFound) break;
         }
       } catch (e) {
@@ -195,7 +197,11 @@ class CachingService {
         loggerObject.e('CacheKey.fromJson $e');
       }
     }
-    return list;
+
+    var sortedEntries = myMap.entries.toList()
+      ..sort((e1, e2) => e1.value.compareTo(e2.value));
+
+    return sortedEntries.map((e) => e.key).toList();
   }
 
   static Future<DateTime?> _latestDate(String name) async {
@@ -231,14 +237,23 @@ class CachingService {
 
   static String _getIdParam(dynamic data) {
     try {
-      if (data is List) {
+      // If passing list of items
+      if (data is Iterable) {
+        // If no items
+        if (data.isEmpty) return '';
+
+        // If first item string that meaning is the list is [id,id,id...]
+        // Then return first id
         if (data.first is String) return data.first;
-        return (data.first.id.toString().isBlank) ? '-' : data.first.id.toString();
+
+        // Get first item and get param .id and convert to string and check if it not blank
+        return (data.first.id.toString().isBlank) ? '' : data.first.id.toString();
       } else {
-        return (data.id.toString().isBlank) ? '-' : data.id.toString();
+        // Not Lest then it`s single item
+        return (data.id.toString().isBlank) ? '' : data.id.toString();
       }
     } catch (e) {
-      return '-1';
+      return '';
     }
   }
 }
@@ -248,6 +263,7 @@ class CacheKey {
     required this.id,
     required this.filter,
     required this.version,
+    required this.sort,
   }) {
     filter = filter.replaceAll('null', '');
   }
@@ -255,12 +271,14 @@ class CacheKey {
   final String id;
   String filter;
   final num version;
+  final int sort;
 
   factory CacheKey.fromJson(Map<String, dynamic> json) {
     return CacheKey(
       id: json["i"] ?? "",
       filter: json["f"] ?? "",
       version: json["v"] ?? 0,
+      sort: json["s"] ?? 0,
     );
   }
 
@@ -268,6 +286,7 @@ class CacheKey {
         "i": id,
         "f": filter,
         "v": version,
+        "s": sort,
       };
 
   String get jsonString => jsonEncode(this);
@@ -276,11 +295,13 @@ class CacheKey {
     String? id,
     String? filter,
     num? version,
+    int? sort,
   }) {
     return CacheKey(
       id: id ?? this.id,
       filter: filter ?? this.filter,
       version: version ?? this.version,
+      sort: sort ?? this.sort,
     );
   }
 }
