@@ -6,6 +6,7 @@ import 'package:logger/logger.dart';
 
 import '../abstraction.dart';
 import '../util.dart';
+import 'package:collection/collection.dart';
 
 var loggerObject = Logger(
   printer: PrettyPrinter(
@@ -69,16 +70,16 @@ class CachingService {
       await clearKeysId(box: box, key: key);
 
       final map = <dynamic, String>{};
-      var i = 0;
-      for (var e in data) {
-        i++;
 
-        final id = haveId ? _getIdParam(e) : '';
+      data.forEachIndexed(
+        (i, e) {
+          final id = haveId ? _getIdParam(e) : '';
 
-        final keyString = key.copyWith(id: id, sort: i).jsonString;
+          final keyString = key.copyWith(id: id, sort: i).jsonString;
 
-        map[keyString] = jsonEncode(e);
-      }
+          map[keyString] = jsonEncode(e);
+        },
+      );
 
       await box.putAll(map);
 
