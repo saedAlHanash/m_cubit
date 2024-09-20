@@ -2,10 +2,27 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 
 import 'package:hive/hive.dart';
+import 'package:logger/logger.dart';
 import 'package:m_cubit/util.dart';
 
 import 'caching_service/caching_service.dart';
 import 'command.dart';
+
+var _loggerObject = Logger(
+  printer: PrettyPrinter(
+    methodCount: 0,
+    // number of method calls to be displayed
+    errorMethodCount: 0,
+    // number of method calls if stacktrace is provided
+    lineLength: 300,
+    // width of the output
+    colors: true,
+    // Colorful log messages
+    printEmojis: false,
+    // Print an emoji for each log message
+    printTime: false,
+  ),
+);
 
 enum CubitStatuses { init, loading, done, error }
 
@@ -45,28 +62,44 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
 
   int get timeInterval => time;
 
-  Future<Box<String>> get box => CachingService.getBox(nameCache);
+  MCubitCache get _cacheKey =>
+      MCubitCache(nameCache: nameCache, filter: filter, timeInterval: timeInterval);
 
   Future<NeedUpdateEnum> _needGetData() async {
-    return await CachingService.needGetData(this);
+    return await CachingService.needGetData(this._cacheKey);
   }
 
-  Future<void> storeData(dynamic data) async {
-    await CachingService.sortData(this, data: data);
+  Future<void> saveData(
+    dynamic data, {
+    bool clearId = true,
+    List<int>? sortKey,
+  }) async {
+    await CachingService.saveData(
+      this._cacheKey,
+      data: data,
+      clearId: clearId,
+      sortKey: sortKey,
+    );
   }
 
   Future<Iterable<dynamic>?> addOrUpdateDate(List<dynamic> data) async {
-    return await CachingService.addOrUpdate(this, data: data);
+    return await CachingService.addOrUpdate(this._cacheKey, data: data);
   }
 
   Future<Iterable<dynamic>?> deleteDate(List<String> ids) async {
-    return await CachingService.delete(this, ids: ids);
+    return await CachingService.delete(this._cacheKey, ids: ids);
   }
 
   Future<List<T>> getListCached<T>({
     required T Function(Map<String, dynamic>) fromJson,
+    bool? reversed,
+    bool Function(Map<String, dynamic> json)? deleteFunction,
   }) async {
-    final data = await CachingService.getList(this);
+    final data = await CachingService.getList(
+      this._cacheKey,
+      deleteFunction: deleteFunction,
+      reversed: reversed,
+    );
     if (data.isEmpty) return [];
     return data.map((e) {
       try {
@@ -80,7 +113,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
   Future<T> _getDataCached<T>({
     required T Function(Map<String, dynamic>) fromJson,
   }) async {
-    final json = await CachingService.getData(this);
+    final json = await CachingService.getData(this._cacheKey);
     try {
       return fromJson(json);
     } catch (e) {
@@ -125,7 +158,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
 
       return false;
     } catch (e) {
-      loggerObject.e('checkCashed  $nameCache: $e');
+      _loggerObject.e('checkCashed  $nameCache: $e');
 
       return false;
     }
@@ -147,7 +180,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     );
 
     if (checkData) {
-      loggerObject.f('$nameCache stopped on cache');
+      _loggerObject.f('$nameCache stopped on cache');
       return;
     }
 
@@ -164,7 +197,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
 
       onError?.call(pair.second);
     } else {
-      await storeData(pair.first);
+      await saveData(pair.first);
 
       if (onSuccess != null) {
         onSuccess.call(pair.first, CubitStatuses.done);
@@ -173,5 +206,19 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
         emit(state.copyWith(statuses: CubitStatuses.done, result: pair.first));
       }
     }
+  }
+}
+
+class MCubitCache {
+  final String nameCache;
+  final String filter;
+  int timeInterval;
+
+  MCubitCache({
+    required this.nameCache,
+    this.filter = '',
+    this.timeInterval = 0,
+  }) {
+    timeInterval = time;
   }
 }

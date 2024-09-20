@@ -1,14 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:collection/collection.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:logger/logger.dart';
 
 import '../abstraction.dart';
 import '../util.dart';
-import 'package:collection/collection.dart';
 
-var loggerObject = Logger(
+var _loggerObject = Logger(
   printer: PrettyPrinter(
     methodCount: 0,
     // number of method calls to be displayed
@@ -29,7 +29,7 @@ var _version = 1;
 
 var time = 60;
 
-void Function(dynamic second)? onErrorFun;
+void Function(dynamic state)? onErrorFun;
 
 class CachingService {
   static Future<void> initial({
@@ -43,41 +43,47 @@ class CachingService {
     await Hive.initFlutter();
   }
 
-  static Future<void> updateLatestUpdateBox(String name) async {
-    final boxUpdate = await getBox(latestUpdateBox);
-
-    await boxUpdate.put(name, DateTime.now().toIso8601String());
+  static Future<void> _updateLatestUpdateBox(String key) async {
+    await (await getBox(latestUpdateBox)).put(key, DateTime.now().toIso8601String());
   }
 
-  static Future<void> sortData(
-    MCubit mCubit, {
+  static Future<void> saveData(
+    MCubitCache mCubit, {
     required dynamic data,
+    bool clearId = true,
+    List<int>? sortKey,
   }) async {
-    await updateLatestUpdateBox(mCubit.nameCache);
-    final box = await mCubit.box;
+    await _updateLatestUpdateBox(mCubit.nameCache);
+
+    final box = await getBox(mCubit.nameCache);
 
     final id = _getIdParam(data);
+
     final haveId = id.isNotEmpty;
 
     final key = CacheKey(
-      id: '',
+      id: id,
       sort: 0,
       filter: mCubit.filter,
       version: _version,
     );
 
     if (data is Iterable) {
-      await clearKeysId(box: box, key: key);
+      if (clearId) await clearKeysId(box: box, key: key);
 
       final map = <dynamic, String>{};
 
       data.forEachIndexed(
-        (i, e) {
+        (i, e) async {
           final id = haveId ? _getIdParam(e) : '';
 
-          final keyString = key.copyWith(id: id, sort: i).jsonString;
-
-          map[keyString] = jsonEncode(e);
+          if (clearId) {
+            final keyString = key.copyWith(id: id, sort: sortKey?[i] ?? i).jsonString;
+            map[keyString] = jsonEncode(e);
+          } else {
+            final keyString = key.copyWith(id: id).jsonString;
+            map[keyString] = jsonEncode(e);
+          }
         },
       );
 
@@ -86,13 +92,11 @@ class CachingService {
       return;
     }
 
-    final keyString = key.copyWith(id: id).jsonString;
-
-    await box.put(keyString, jsonEncode(data));
+    await box.put(key.jsonString, jsonEncode(data));
   }
 
   static Future<Iterable<dynamic>?> addOrUpdate(
-    MCubit mCubit, {
+    MCubitCache mCubit, {
     required List<dynamic> data,
   }) async {
     final key = CacheKey(
@@ -104,7 +108,7 @@ class CachingService {
 
     if (key.id.isEmpty) return null;
 
-    final box = await mCubit.box;
+    final box = await getBox(mCubit.nameCache);
 
     for (var d in data) {
       final keys = box.keys.where((e) => jsonDecode(e)['i'] == d.id);
@@ -123,15 +127,15 @@ class CachingService {
   }
 
   static Future<Iterable<dynamic>?> delete(
-    MCubit mCubit, {
+    MCubitCache mCubit, {
     required List<String> ids,
   }) async {
-    final box = await mCubit.box;
+    final box = await getBox(mCubit.nameCache);
 
     for (var e in box.keys) {
       final json = jsonDecode(e);
       if (ids.contains(json['i'])) {
-        loggerObject.e('delete${json['i']}');
+        _loggerObject.e('delete${json['i']}');
         await box.delete(e);
       }
     }
@@ -148,16 +152,20 @@ class CachingService {
     await box.deleteAll(keys);
   }
 
-  static Future<Iterable<dynamic>> getList(MCubit mCubit) async {
-    final box = await mCubit.box;
+  static Future<Iterable<dynamic>> getList(
+    MCubitCache mCubit, {
+    bool Function(Map<String, dynamic> json)? deleteFunction,
+    bool? reversed,
+  }) async {
+    final box = await getBox(mCubit.nameCache);
 
-    final listKeys = await _findKey(mCubit);
+    final listKeys = await _findKey(mCubit, reversed: reversed);
 
     return listKeys.map((i) => jsonDecode(box.getAt(i) ?? '{}'));
   }
 
-  static Future<dynamic> getData(MCubit mCubit) async {
-    final box = await mCubit.box;
+  static Future<dynamic> getData(MCubitCache mCubit) async {
+    final box = await getBox(mCubit.nameCache);
     final listKeys = await _findKey(mCubit, firstFound: true);
 
     return listKeys.map((i) => jsonDecode(box.getAt(i) ?? '{}')).firstOrNull;
@@ -169,8 +177,13 @@ class CachingService {
         : await Hive.openBox<String>(name);
   }
 
-  static Future<List<int>> _findKey(MCubit mCubit, {bool firstFound = false}) async {
-    final box = await mCubit.box;
+  static Future<List<int>> _findKey(
+    MCubitCache mCubit, {
+    bool firstFound = false,
+    bool? reversed,
+    bool Function(Map<String, dynamic> json)? deleteFunction,
+  }) async {
+    final box = await getBox(mCubit.nameCache);
 
     final listKeys = box.keys.toList();
 
@@ -187,6 +200,15 @@ class CachingService {
           continue;
         }
 
+        if (deleteFunction != null) {
+          if (deleteFunction.call(jsonDecode(box.getAt(i) ?? '{}'))) {
+            listKeys.removeAt(i);
+            await box.deleteAt(i);
+            i -= 1;
+            continue;
+          }
+        }
+
         if (keyCache.filter == mCubit.filter) {
           myMap[i] = keyCache.sort;
           if (firstFound) break;
@@ -195,12 +217,18 @@ class CachingService {
         listKeys.removeAt(i);
         await box.deleteAt(i);
         i -= 1;
-        loggerObject.e('CacheKey.fromJson $e');
+        _loggerObject.e('CacheKey.fromJson $e');
       }
     }
 
     var sortedEntries = myMap.entries.toList()
-      ..sort((e1, e2) => e1.value.compareTo(e2.value));
+      ..sort((e1, e2) {
+        if (reversed == true) {
+          return e2.value.compareTo(e1.value);
+        } else {
+          return e1.value.compareTo(e2.value);
+        }
+      });
 
     return sortedEntries.map((e) => e.key).toList();
   }
@@ -209,7 +237,7 @@ class CachingService {
     return DateTime.tryParse((await getBox(latestUpdateBox)).get(name) ?? '');
   }
 
-  static Future<NeedUpdateEnum> needGetData(MCubit mCubit) async {
+  static Future<NeedUpdateEnum> needGetData(MCubitCache mCubit) async {
     //latest update
     final latest = await _latestDate(mCubit.nameCache);
 
@@ -238,6 +266,9 @@ class CachingService {
 
   static String _getIdParam(dynamic data) {
     try {
+      // If json passing
+      if (data is Map) return data['id'] ?? '';
+
       // If passing list of items
       if (data is Iterable) {
         // If no items
@@ -246,6 +277,8 @@ class CachingService {
         // If first item string that meaning is the list is [id,id,id...]
         // Then return first id
         if (data.first is String) return data.first;
+
+        if (data.first is Map) return data.first['id'] ?? '';
 
         // Get first item and get param .id and convert to string and check if it not blank
         return (data.first.id.toString().isBlank) ? '' : data.first.id.toString();
