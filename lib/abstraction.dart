@@ -33,7 +33,11 @@ abstract class AbstractState<T> extends Equatable {
   final FilterRequest? filterRequest;
   final dynamic request;
 
-  String get filter => filterRequest?.getKey ?? request?.toString().getKey ?? '';
+  String get filter {
+    final f = filterRequest?.getKey ?? request?.toString().getKey ?? '';
+    _loggerObject.w(f);
+    return f;
+  }
 
   const AbstractState({
     this.statuses = CubitStatuses.init,
@@ -73,9 +77,10 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     dynamic data, {
     bool clearId = true,
     List<int>? sortKey,
+    MCubitCache? cacheKey,
   }) async {
     await CachingService.saveData(
-      this._cacheKey,
+      cacheKey ?? this._cacheKey,
       data: data,
       clearId: clearId,
       sortKey: sortKey,
@@ -172,6 +177,8 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     void Function(dynamic second)? onError,
     void Function(dynamic data, CubitStatuses emitState)? onSuccess,
   }) async {
+    final cacheKey = this._cacheKey;
+
     final checkData = await checkCashed(
       state: state,
       fromJson: fromJson,
@@ -197,7 +204,10 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
 
       onError?.call(pair.second);
     } else {
-      await saveData(pair.first);
+      await saveData(
+        pair.first,
+        cacheKey: cacheKey,
+      );
 
       if (onSuccess != null) {
         onSuccess.call(pair.first, CubitStatuses.done);
