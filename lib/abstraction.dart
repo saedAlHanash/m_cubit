@@ -35,7 +35,6 @@ abstract class AbstractState<T> extends Equatable {
 
   String get filter {
     final f = filterRequest?.getKey ?? request?.toString().getKey ?? '';
-    _loggerObject.w(f);
     return f;
   }
 
