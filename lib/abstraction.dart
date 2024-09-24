@@ -128,10 +128,10 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
   Future<bool> checkCashed<T>({
     required dynamic state,
     required T Function(Map<String, dynamic>) fromJson,
-    bool newData = false,
+    bool? newData ,
     void Function(dynamic data, CubitStatuses emitState)? onSuccess,
   }) async {
-    if (newData || nameCache.isEmpty) {
+    if (newData == true || nameCache.isEmpty) {
       emit(state.copyWith(statuses: CubitStatuses.loading));
       return false;
     }
@@ -172,7 +172,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     required T Function(Map<String, dynamic>) fromJson,
     required dynamic state,
     required Function getDataApi,
-    bool newData = false,
+    bool? newData,
     void Function(dynamic second)? onError,
     void Function(dynamic data, CubitStatuses emitState)? onSuccess,
   }) async {
