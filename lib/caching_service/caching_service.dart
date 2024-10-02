@@ -53,6 +53,7 @@ class CachingService {
     bool clearId = true,
     List<int>? sortKey,
   }) async {
+
     await _updateLatestUpdateBox(mCubit.nameCache);
 
     final box = await getBox(mCubit.nameCache);
@@ -159,7 +160,8 @@ class CachingService {
   }) async {
     final box = await getBox(mCubit.nameCache);
 
-    final listKeys = await _findKey(mCubit, reversed: reversed);
+    final listKeys =
+        await _findKey(mCubit, reversed: reversed, deleteFunction: deleteFunction);
 
     return listKeys.map((i) => jsonDecode(box.getAt(i) ?? '{}'));
   }
@@ -217,9 +219,11 @@ class CachingService {
         listKeys.removeAt(i);
         await box.deleteAt(i);
         i -= 1;
-        _loggerObject.e('CacheKey.fromJson $e');
+        _loggerObject.e('_findKey $e');
       }
     }
+
+    if (myMap.isEmpty) return [];
 
     var sortedEntries = myMap.entries.toList()
       ..sort((e1, e2) {
