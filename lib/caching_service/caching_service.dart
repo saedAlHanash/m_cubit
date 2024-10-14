@@ -28,20 +28,28 @@ const latestUpdateBox = 'latestUpdateBox';
 var _version = 1;
 
 var time = 60;
-
+String? mSupperFilter;
 void Function(dynamic state)? onErrorFun;
 
 class CachingService {
   static Future<void> initial({
     int? version,
     int? timeInterval,
+    String? supperFilter,
     required Function(dynamic second)? onError,
   }) async {
     _version = version ?? 1;
+
     time = timeInterval ?? 180;
+
+    mSupperFilter = supperFilter;
+
     onErrorFun = onError;
+
     await Hive.initFlutter();
   }
+
+  static void setSupperFilter(String supperFilter) => mSupperFilter = supperFilter;
 
   static Future<void> _updateLatestUpdateBox(String key) async {
     await (await getBox(latestUpdateBox)).put(key, DateTime.now().toIso8601String());
@@ -53,7 +61,6 @@ class CachingService {
     bool clearId = true,
     List<int>? sortKey,
   }) async {
-
     await _updateLatestUpdateBox(mCubit.nameCache);
 
     final box = await getBox(mCubit.nameCache);

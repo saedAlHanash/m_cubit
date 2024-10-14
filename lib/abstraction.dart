@@ -65,8 +65,11 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
 
   int get timeInterval => time;
 
-  MCubitCache get _cacheKey =>
-      MCubitCache(nameCache: nameCache, filter: filter, timeInterval: timeInterval);
+  MCubitCache get _cacheKey => MCubitCache(
+        nameCache: nameCache,
+        filter: '${mSupperFilter ?? ''}$filter',
+        timeInterval: timeInterval,
+      );
 
   Future<NeedUpdateEnum> _needGetData() async {
     return await CachingService.needGetData(this._cacheKey);
@@ -128,7 +131,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
   Future<bool> checkCashed<T>({
     required dynamic state,
     required T Function(Map<String, dynamic>) fromJson,
-    bool? newData ,
+    bool? newData,
     void Function(dynamic data, CubitStatuses emitState)? onSuccess,
   }) async {
     if (newData == true || nameCache.isEmpty) {
