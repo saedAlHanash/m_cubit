@@ -24,7 +24,7 @@ var _loggerObject = Logger(
   ),
 );
 
-enum CubitStatuses { init, loading, done, error }
+enum CubitStatuses { init, loading,noLoading, done, error }
 
 abstract class AbstractState<T> extends Equatable {
   final CubitStatuses statuses;
@@ -47,6 +47,7 @@ abstract class AbstractState<T> extends Equatable {
   });
 
   bool get loading => statuses == CubitStatuses.loading;
+  bool get noLoading => statuses == CubitStatuses.noLoading;
 
   bool get done => statuses == CubitStatuses.done;
 
@@ -229,8 +230,8 @@ class MCubitCache {
   MCubitCache({
     required this.nameCache,
     this.filter = '',
-    this.timeInterval = 0,
+    this.timeInterval = -1,
   }) {
-    timeInterval = time;
+    if (timeInterval < 0) timeInterval = time;
   }
 }

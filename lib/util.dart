@@ -84,8 +84,7 @@ extension NeedUpdateEnumH on NeedUpdateEnum {
       case NeedUpdateEnum.withLoading:
         return CubitStatuses.loading;
       case NeedUpdateEnum.noLoading:
-        return CubitStatuses.done;
+        return CubitStatuses.noLoading;
     }
   }
 }
-

@@ -51,8 +51,9 @@ class CachingService {
 
   static void setSupperFilter(String supperFilter) => mSupperFilter = supperFilter;
 
-  static Future<void> _updateLatestUpdateBox(String key) async {
-    await (await getBox(latestUpdateBox)).put(key, DateTime.now().toIso8601String());
+  static Future<void> _updateLatestUpdateBox(MCubitCache mCubit) async {
+    await (await getBox(latestUpdateBox))
+        .put('${mCubit.nameCache}${mCubit.filter}', DateTime.now().toIso8601String());
   }
 
   static Future<void> saveData(
@@ -61,7 +62,7 @@ class CachingService {
     bool clearId = true,
     List<int>? sortKey,
   }) async {
-    await _updateLatestUpdateBox(mCubit.nameCache);
+    await _updateLatestUpdateBox(mCubit);
 
     final box = await getBox(mCubit.nameCache);
 
@@ -244,13 +245,14 @@ class CachingService {
     return sortedEntries.map((e) => e.key).toList();
   }
 
-  static Future<DateTime?> _latestDate(String name) async {
-    return DateTime.tryParse((await getBox(latestUpdateBox)).get(name) ?? '');
+  static Future<DateTime?> _latestDate(MCubitCache mCubit) async {
+    return DateTime.tryParse(
+        (await getBox(latestUpdateBox)).get('${mCubit.nameCache}${mCubit.filter}') ?? '');
   }
 
   static Future<NeedUpdateEnum> needGetData(MCubitCache mCubit) async {
     //latest update
-    final latest = await _latestDate(mCubit.nameCache);
+    final latest = await _latestDate(mCubit);
 
     //if null then this is first time -LOADING-
     if (latest == null) return NeedUpdateEnum.withLoading;
