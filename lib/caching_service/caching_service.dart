@@ -19,8 +19,6 @@ var _loggerObject = Logger(
     colors: true,
     // Colorful log messages
     printEmojis: false,
-    // Print an emoji for each log message
-    printTime: false,
   ),
 );
 
