@@ -126,13 +126,12 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     }
   }
 
-  Future<bool> checkCashed<T>({
+  Future<MapEntry<bool, dynamic>> checkCashed<T>({
     required dynamic state,
     required T Function(Map<String, dynamic>) fromJson,
     bool? newData,
     void Function(dynamic data, CubitStatuses emitState)? onSuccess,
   }) async {
-
     dynamic data;
 
     if (state.result is List) {
@@ -141,37 +140,32 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
       data = await _getDataCached(fromJson: fromJson);
     }
 
+    final mState = state.copyWith(result: data);
+
     if (newData == true || nameCache.isEmpty) {
       if (onSuccess != null) {
         onSuccess.call(data, CubitStatuses.loading);
       } else {
-        emit(state.copyWith(statuses: CubitStatuses.loading, result: data));
+        emit(mState.copyWith(statuses: CubitStatuses.loading));
       }
-      return false;
+
+      return MapEntry(false, mState);
     }
 
     try {
-
       final cacheType = await _needGetData();
 
       if (onSuccess != null) {
         onSuccess.call(data, cacheType.getState);
       } else {
-        emit(
-          state.copyWith(
-            result: data,
-            statuses: cacheType.getState,
-          ),
-        );
+        emit(mState.copyWith(statuses: cacheType.getState));
       }
 
-      if (cacheType == NeedUpdateEnum.no) return true;
-      return false;
-
+      return MapEntry(cacheType == NeedUpdateEnum.no, mState);
     } catch (e) {
       _loggerObject.e('checkCashed  $nameCache: $e');
 
-      return false;
+      return MapEntry(false, mState);
     }
   }
 
@@ -192,7 +186,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
       onSuccess: onSuccess,
     );
 
-    if (checkData) {
+    if (checkData.key) {
       _loggerObject.f('$nameCache stopped on cache');
       return;
     }
@@ -202,8 +196,8 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     if (pair.first == null) {
       if (isClosed) return;
 
-      final s =
-          state.copyWith(statuses: CubitStatuses.error, error: pair.second);
+      final s = checkData.value
+          .copyWith(statuses: CubitStatuses.error, error: pair.second);
 
       emit(s);
 
@@ -220,7 +214,8 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
         onSuccess.call(pair.first, CubitStatuses.done);
       } else {
         if (isClosed) return;
-        emit(state.copyWith(statuses: CubitStatuses.done, result: pair.first));
+        emit(checkData.value
+            .copyWith(statuses: CubitStatuses.done, result: pair.first));
       }
     }
   }
