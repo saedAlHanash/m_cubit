@@ -24,7 +24,7 @@ var _loggerObject = Logger(
   ),
 );
 
-enum CubitStatuses { init, loading,noLoading, done, error }
+enum CubitStatuses { init, loading, noLoading, done, error }
 
 abstract class AbstractState<T> extends Equatable {
   final CubitStatuses statuses;
@@ -88,6 +88,10 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
       clearId: clearId,
       sortKey: sortKey,
     );
+  }
+
+  Future<void> clearCash() async {
+    CachingService.clearCash(nameCache);
   }
 
   Future<Iterable<dynamic>?> addOrUpdateDate(List<dynamic> data) async {
