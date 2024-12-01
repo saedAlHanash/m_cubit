@@ -1,7 +1,5 @@
-import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-
-import 'package:hive/hive.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 import 'package:m_cubit/util.dart';
 
@@ -19,8 +17,6 @@ var _loggerObject = Logger(
     colors: true,
     // Colorful log messages
     printEmojis: false,
-    // Print an emoji for each log message
-    printTime: false,
   ),
 );
 
@@ -47,6 +43,7 @@ abstract class AbstractState<T> extends Equatable {
   });
 
   bool get loading => statuses == CubitStatuses.loading;
+
   bool get noLoading => statuses == CubitStatuses.noLoading;
 
   bool get done => statuses == CubitStatuses.done;
@@ -133,46 +130,46 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     }
   }
 
-  Future<bool> checkCashed<T>({
+  Future<MapEntry<bool, dynamic>> checkCashed<T>({
     required dynamic state,
     required T Function(Map<String, dynamic>) fromJson,
     bool? newData,
     void Function(dynamic data, CubitStatuses emitState)? onSuccess,
   }) async {
+    dynamic data;
+
+    if (state.result is List) {
+      data = await getListCached(fromJson: fromJson);
+    } else {
+      data = await _getDataCached(fromJson: fromJson);
+    }
+
+    final mState = state.copyWith(result: data);
+
     if (newData == true || nameCache.isEmpty) {
-      emit(state.copyWith(statuses: CubitStatuses.loading));
-      return false;
+      if (onSuccess != null) {
+        onSuccess.call(data, CubitStatuses.loading);
+      } else {
+        emit(mState.copyWith(statuses: CubitStatuses.loading));
+      }
+
+      return MapEntry(false, mState);
     }
 
     try {
       final cacheType = await _needGetData();
 
-      dynamic data;
-
-      if (state.result is List) {
-        data = await getListCached(fromJson: fromJson);
-      } else {
-        data = await _getDataCached(fromJson: fromJson);
-      }
-
       if (onSuccess != null) {
         onSuccess.call(data, cacheType.getState);
       } else {
-        emit(
-          state.copyWith(
-            result: data,
-            statuses: cacheType.getState,
-          ),
-        );
+        emit(mState.copyWith(statuses: cacheType.getState));
       }
 
-      if (cacheType == NeedUpdateEnum.no) return true;
-
-      return false;
+      return MapEntry(cacheType == NeedUpdateEnum.no, mState);
     } catch (e) {
       _loggerObject.e('checkCashed  $nameCache: $e');
 
-      return false;
+      return MapEntry(false, mState);
     }
   }
 
@@ -193,7 +190,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
       onSuccess: onSuccess,
     );
 
-    if (checkData) {
+    if (checkData.key) {
       _loggerObject.f('$nameCache stopped on cache');
       return;
     }
@@ -203,7 +200,8 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     if (pair.first == null) {
       if (isClosed) return;
 
-      final s = state.copyWith(statuses: CubitStatuses.error, error: pair.second);
+      final s = checkData.value
+          .copyWith(statuses: CubitStatuses.error, error: pair.second);
 
       emit(s);
 
@@ -220,7 +218,8 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
         onSuccess.call(pair.first, CubitStatuses.done);
       } else {
         if (isClosed) return;
-        emit(state.copyWith(statuses: CubitStatuses.done, result: pair.first));
+        emit(checkData.value
+            .copyWith(statuses: CubitStatuses.done, result: pair.first));
       }
     }
   }
