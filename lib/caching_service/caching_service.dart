@@ -32,6 +32,7 @@ void Function(dynamic state)? onErrorFun;
 class CachingService {
   static Future<void> initial({
     int? version,
+    String? path,
     int? timeInterval,
     String? supperFilter,
     required Function(dynamic second)? onError,
@@ -44,7 +45,7 @@ class CachingService {
 
     onErrorFun = onError;
 
-    await Hive.initFlutter();
+    await Hive.initFlutter(path);
   }
 
   static void setSupperFilter(String supperFilter) => mSupperFilter = supperFilter;
@@ -166,8 +167,7 @@ class CachingService {
   }) async {
     final box = await getBox(mCubit.nameCache);
 
-    final listKeys =
-        await _findKey(mCubit, reversed: reversed, deleteFunction: deleteFunction);
+    final listKeys = await _findKey(mCubit, reversed: reversed, deleteFunction: deleteFunction);
 
     return listKeys.map((i) => jsonDecode(box.getAt(i) ?? '{}'));
   }
@@ -180,9 +180,7 @@ class CachingService {
   }
 
   static Future<Box<String>> getBox(String name) async {
-    return Hive.isBoxOpen(name)
-        ? Hive.box<String>(name)
-        : await Hive.openBox<String>(name);
+    return Hive.isBoxOpen(name) ? Hive.box<String>(name) : await Hive.openBox<String>(name);
   }
 
   static Future<List<int>> _findKey(
