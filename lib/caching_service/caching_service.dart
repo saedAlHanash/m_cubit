@@ -299,6 +299,8 @@ class CachingService {
       return '';
     }
   }
+
+  static Future<void> clearCash(String name) async => await (await getBox(name)).clear();
 }
 
 class CacheKey {

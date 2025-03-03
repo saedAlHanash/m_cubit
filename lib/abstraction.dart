@@ -87,6 +87,10 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     );
   }
 
+  Future<void> clearCash() async {
+    CachingService.clearCash(nameCache);
+  }
+
   Future<Iterable<dynamic>?> addOrUpdateDate(List<dynamic> data) async {
     return await CachingService.addOrUpdate(this._cacheKey, data: data);
   }
