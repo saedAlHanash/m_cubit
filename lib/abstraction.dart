@@ -49,9 +49,7 @@ abstract class AbstractState<T> extends Equatable {
   bool get done => statuses == CubitStatuses.done;
 
   bool get isDataEmpty =>
-      (statuses != CubitStatuses.loading) &&
-      (result is List) &&
-      ((result as List).isEmpty);
+      (statuses != CubitStatuses.loading) && (result is List) && ((result as List).isEmpty);
 }
 
 abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
@@ -64,8 +62,8 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
   int get timeInterval => time;
 
   MCubitCache get _cacheKey => MCubitCache(
-        nameCache: nameCache,
-        filter: '${mSupperFilter ?? ''}$filter',
+        nameCache: '${mSupperFilter ?? ''}$nameCache',
+        filter: filter,
         timeInterval: timeInterval,
       );
 
@@ -200,8 +198,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     if (pair.first == null) {
       if (isClosed) return;
 
-      final s = checkData.value
-          .copyWith(statuses: CubitStatuses.error, error: pair.second);
+      final s = checkData.value.copyWith(statuses: CubitStatuses.error, error: pair.second);
 
       emit(s);
 
@@ -218,8 +215,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
         onSuccess.call(pair.first, CubitStatuses.done);
       } else {
         if (isClosed) return;
-        emit(checkData.value
-            .copyWith(statuses: CubitStatuses.done, result: pair.first));
+        emit(checkData.value.copyWith(statuses: CubitStatuses.done, result: pair.first));
       }
     }
   }
