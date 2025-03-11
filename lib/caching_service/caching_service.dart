@@ -22,7 +22,7 @@ var _loggerObject = Logger(
   ),
 );
 
-const latestUpdateBox = 'latestUpdateBox';
+String get latestUpdateBox => '${mSupperFilter ?? ''}-latestUpdateBox';
 var _version = 1;
 
 var time = 60;
@@ -51,8 +51,10 @@ class CachingService {
   static void setSupperFilter(String supperFilter) => mSupperFilter = supperFilter;
 
   static Future<void> _updateLatestUpdateBox(MCubitCache mCubit) async {
-    await (await getBox(latestUpdateBox))
-        .put('${mCubit.nameCache}${mCubit.filter}', DateTime.now().toIso8601String());
+    await (await getBox(latestUpdateBox)).put(
+      '${mCubit.nameCache.replaceAll(mSupperFilter ?? '', '')}${mCubit.filter}',
+      DateTime.now().toIso8601String(),
+    );
   }
 
   static Future<void> saveData(
@@ -143,7 +145,7 @@ class CachingService {
     for (var e in box.keys) {
       final json = jsonDecode(e);
       if (ids.contains(json['i'])) {
-        _loggerObject.e('delete${json['i']}');
+        _loggerObject.e('delete: ${json['i']}');
         await box.delete(e);
       }
     }
@@ -223,7 +225,7 @@ class CachingService {
         listKeys.removeAt(i);
         await box.deleteAt(i);
         i -= 1;
-        _loggerObject.e('_findKey $e');
+        _loggerObject.e('_findKey: $e');
       }
     }
 
@@ -328,13 +330,13 @@ class CacheKey {
   }
 
   Map<String, dynamic> toJson() => {
-        "i": id,
-        "f": filter,
-        "v": version,
-        "s": sort,
+        if (id.isNotEmpty) "i": id,
+        if (filter.isNotEmpty) "f": filter,
+        if (version != 0) "v": version,
+        if (sort != 0) "s": sort,
       };
 
-  String get jsonString => jsonEncode(this);
+  String get jsonString => jsonEncode(toJson());
 
   CacheKey copyWith({
     String? id,

@@ -62,7 +62,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
   int get timeInterval => time;
 
   MCubitCache get _cacheKey => MCubitCache(
-        nameCache: '${mSupperFilter ?? ''}$nameCache',
+        nameCache: '${mSupperFilter ?? ''}-$nameCache',
         filter: filter,
         timeInterval: timeInterval,
       );
