@@ -244,8 +244,9 @@ class CachingService {
   }
 
   static Future<DateTime?> _latestDate(MCubitCache mCubit) async {
-    return DateTime.tryParse(
-        (await getBox(latestUpdateBox)).get('${mCubit.nameCache}${mCubit.filter}') ?? '');
+    return DateTime.tryParse((await getBox(latestUpdateBox))
+            .get('${mCubit.nameCache.replaceAll(mSupperFilter ?? '', '')}${mCubit.filter}') ??
+        '');
   }
 
   static Future<NeedUpdateEnum> needGetData(MCubitCache mCubit) async {
