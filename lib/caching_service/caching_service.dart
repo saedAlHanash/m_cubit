@@ -74,7 +74,7 @@ class CachingService {
     final key = CacheKey(
       id: id,
       sort: 0,
-      filter: mCubit.filter,
+      filter: mCubit.filter.hashCode.toString(),
       version: _version,
     );
 
@@ -217,7 +217,7 @@ class CachingService {
           }
         }
 
-        if (keyCache.filter == mCubit.filter) {
+        if (keyCache.filter == mCubit.filter.hashCode.toString()) {
           myMap[i] = keyCache.sort;
           if (firstFound) break;
         }
@@ -332,7 +332,7 @@ class CacheKey {
 
   Map<String, dynamic> toJson() => {
         if (id.isNotEmpty) "i": id,
-        if (filter.isNotEmpty) "f": filter,
+        if (filter.isNotEmpty) "f": filter.hashCode.toString(),
         if (version != 0) "v": version,
         if (sort != 0) "s": sort,
       };
