@@ -61,8 +61,10 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
 
   int get timeInterval => time;
 
+  bool get withSupperFilet => true;
+
   MCubitCache get _cacheKey => MCubitCache(
-        nameCache: '${mSupperFilter ?? ''}-$nameCache',
+        nameCache: withSupperFilet ? '${mSupperFilter ?? ''}-$nameCache' : nameCache,
         filter: filter,
         timeInterval: timeInterval,
       );
@@ -225,6 +227,8 @@ class MCubitCache {
   final String nameCache;
   final String filter;
   int timeInterval;
+
+  String get fixedName => nameCache.replaceAll(mSupperFilter ?? '', '');
 
   MCubitCache({
     required this.nameCache,

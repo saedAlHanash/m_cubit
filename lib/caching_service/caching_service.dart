@@ -52,7 +52,7 @@ class CachingService {
 
   static Future<void> _updateLatestUpdateBox(MCubitCache mCubit) async {
     await (await getBox(latestUpdateBox)).put(
-      '${mCubit.nameCache.replaceAll(mSupperFilter ?? '', '')}${mCubit.filter}',
+      '${mCubit.fixedName}${mCubit.filter}',
       DateTime.now().toIso8601String(),
     );
   }
@@ -74,7 +74,7 @@ class CachingService {
     final key = CacheKey(
       id: id,
       sort: 0,
-      filter: mCubit.filter.hashCode.toString(),
+      filter: mCubit.filter,
       version: _version,
     );
 
@@ -217,7 +217,7 @@ class CachingService {
           }
         }
 
-        if (keyCache.filter == mCubit.filter.hashCode.toString()) {
+        if (keyCache.filter == mCubit.filter) {
           myMap[i] = keyCache.sort;
           if (firstFound) break;
         }
@@ -244,9 +244,8 @@ class CachingService {
   }
 
   static Future<DateTime?> _latestDate(MCubitCache mCubit) async {
-    return DateTime.tryParse((await getBox(latestUpdateBox))
-            .get('${mCubit.nameCache.replaceAll(mSupperFilter ?? '', '')}${mCubit.filter}') ??
-        '');
+    return DateTime.tryParse(
+        (await getBox(latestUpdateBox)).get('${mCubit.fixedName}${mCubit.filter}') ?? '');
   }
 
   static Future<NeedUpdateEnum> needGetData(MCubitCache mCubit) async {
@@ -332,7 +331,7 @@ class CacheKey {
 
   Map<String, dynamic> toJson() => {
         if (id.isNotEmpty) "i": id,
-        if (filter.isNotEmpty) "f": filter.hashCode.toString(),
+        if (filter.isNotEmpty) "f": filter,
         if (version != 0) "v": version,
         if (sort != 0) "s": sort,
       };
