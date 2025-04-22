@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:logger/logger.dart';
 
 import '../abstraction.dart';
@@ -23,10 +23,13 @@ var _loggerObject = Logger(
 );
 
 String get latestUpdateBox => '${mSupperFilter ?? ''}-latestUpdateBox';
+
 var _version = 1;
 
 var time = 60;
+
 String? mSupperFilter;
+
 void Function(dynamic state)? onErrorFun;
 
 class CachingService {
