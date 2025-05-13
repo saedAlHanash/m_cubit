@@ -30,7 +30,9 @@ abstract class AbstractState<T> extends Equatable {
   final dynamic request;
 
   String get filter {
-    final f = filterRequest?.getKey ?? request?.toString().getKey ?? '';
+    final f = filterRequest?.getKey ?? request
+        ?.toString()
+        .getKey ?? '';
     return f;
   }
 
@@ -63,7 +65,8 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
 
   bool get withSupperFilet => true;
 
-  MCubitCache get _cacheKey => MCubitCache(
+  MCubitCache get _cacheKey =>
+      MCubitCache(
         nameCache: withSupperFilet ? '${mSupperFilter ?? ''}-$nameCache' : nameCache,
         filter: filter,
         timeInterval: timeInterval,
@@ -73,8 +76,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     return await CachingService.needGetData(this._cacheKey);
   }
 
-  Future<void> saveData(
-    dynamic data, {
+  Future<void> saveData(dynamic data, {
     bool clearId = true,
     List<int>? sortKey,
     MCubitCache? cacheKey,
@@ -204,8 +206,9 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
 
       emit(s);
 
-      onErrorFun?.call(s);
-
+      if (onError == null) {
+        onErrorFun?.call(s);
+      }
       onError?.call(pair.second);
     } else {
       await saveData(
