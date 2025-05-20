@@ -121,7 +121,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     }).toList();
   }
 
-  Future<T> _getDataCached<T>({
+  Future<T> getDataCached<T>({
     required T Function(Map<String, dynamic>) fromJson,
   }) async {
     final json = await CachingService.getData(this._cacheKey);
@@ -143,7 +143,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     if (state.result is List) {
       data = await getListCached(fromJson: fromJson);
     } else {
-      data = await _getDataCached(fromJson: fromJson);
+      data = await getDataCached(fromJson: fromJson);
     }
 
     final mState = state.copyWith(result: data);
