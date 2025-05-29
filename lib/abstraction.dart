@@ -1,3 +1,5 @@
+import 'dart:nativewrappers/_internal/vm/lib/ffi_allocation_patch.dart';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
@@ -22,25 +24,31 @@ var _loggerObject = Logger(
 
 enum CubitStatuses { init, loading, noLoading, done, error }
 
+enum CubitCrud { get, create, update, delete }
+
 abstract class AbstractState<T> extends Equatable {
   final CubitStatuses statuses;
+  final CubitCrud cubitCrud;
   final String error;
   final T result;
   final FilterRequest? filterRequest;
   final dynamic request;
+  final dynamic id;
+  final dynamic createUpdateRequest;
 
   String get filter {
-    final f = filterRequest?.getKey ?? request
-        ?.toString()
-        .getKey ?? '';
+    final f = filterRequest?.getKey ?? request?.toString().getKey ?? '';
     return f;
   }
 
   const AbstractState({
     this.statuses = CubitStatuses.init,
+    this.cubitCrud = CubitCrud.get,
     this.error = '',
     this.filterRequest,
     this.request,
+    this.createUpdateRequest,
+    this.id,
     required this.result,
   });
 
@@ -49,6 +57,12 @@ abstract class AbstractState<T> extends Equatable {
   bool get noLoading => statuses == CubitStatuses.noLoading;
 
   bool get done => statuses == CubitStatuses.done;
+
+  bool get create => cubitCrud == CubitCrud.create;
+
+  bool get update => cubitCrud == CubitCrud.update;
+
+  bool get delete => cubitCrud == CubitCrud.delete;
 
   bool get isDataEmpty =>
       (statuses != CubitStatuses.loading) && (result is List) && ((result as List).isEmpty);
@@ -65,8 +79,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
 
   bool get withSupperFilet => true;
 
-  MCubitCache get _cacheKey =>
-      MCubitCache(
+  MCubitCache get _cacheKey => MCubitCache(
         nameCache: withSupperFilet ? '${mSupperFilter ?? ''}-$nameCache' : nameCache,
         filter: filter,
         timeInterval: timeInterval,
@@ -76,7 +89,8 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     return await CachingService.needGetData(this._cacheKey);
   }
 
-  Future<void> saveData(dynamic data, {
+  Future<void> saveData(
+    dynamic data, {
     bool clearId = true,
     List<int>? sortKey,
     MCubitCache? cacheKey,
@@ -223,6 +237,23 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
         emit(checkData.value.copyWith(statuses: CubitStatuses.done, result: pair.first));
       }
     }
+  }
+
+  Future<void> getFromCache<T>({
+    required T Function(Map<String, dynamic>) fromJson,
+    required dynamic state,
+    void Function(dynamic data)? onSuccess,
+  }) async {
+    dynamic data;
+
+    if (state.result is List) {
+      data = await getListCached(fromJson: fromJson);
+    } else {
+      data = await getDataCached(fromJson: fromJson);
+    }
+    onSuccess?.call(data);
+
+    emit(state.copyWith(result: data));
   }
 }
 
