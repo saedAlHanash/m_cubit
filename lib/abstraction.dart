@@ -240,7 +240,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
   Future<void> getFromCache<T>({
     required T Function(Map<String, dynamic>) fromJson,
     required dynamic state,
-    void Function(dynamic data)? onSuccess,
+    required void Function(dynamic data) onSuccess,
   }) async {
     dynamic data;
 
@@ -249,9 +249,10 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     } else {
       data = await getDataCached(fromJson: fromJson);
     }
-    onSuccess?.call(data);
 
-    emit(state.copyWith(result: data));
+    onSuccess.call(data);
+
+    // emit(state.copyWith(result: data));
   }
 }
 
