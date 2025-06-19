@@ -35,7 +35,7 @@ abstract class AbstractState<T> extends Equatable {
   final dynamic createUpdateRequest;
 
   String get filter {
-    final f = filterRequest?.getKey ?? request?.toString().getKey ?? '';
+    final f = filterRequest?.getKey ?? request?.toString().getKey ?? id?.toString().getKey ?? '';
     return f;
   }
 
@@ -77,14 +77,14 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
 
   bool get withSupperFilet => true;
 
-  MCubitCache get _cacheKey => MCubitCache(
+  MCubitCache get cacheKey => MCubitCache(
         nameCache: withSupperFilet ? '${mSupperFilter ?? ''}-$nameCache' : nameCache,
         filter: filter,
         timeInterval: timeInterval,
       );
 
   Future<NeedUpdateEnum> _needGetData() async {
-    return await CachingService.needGetData(this._cacheKey);
+    return await CachingService.needGetData(this.cacheKey);
   }
 
   Future<void> saveData(
@@ -94,7 +94,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     MCubitCache? cacheKey,
   }) async {
     await CachingService.saveData(
-      cacheKey ?? this._cacheKey,
+      cacheKey ?? this.cacheKey,
       data: data,
       clearId: clearId,
       sortKey: sortKey,
@@ -106,11 +106,11 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
   }
 
   Future<Iterable<dynamic>?> addOrUpdateDate(List<dynamic> data) async {
-    return await CachingService.addOrUpdate(this._cacheKey, data: data);
+    return await CachingService.addOrUpdate(this.cacheKey, data: data);
   }
 
   Future<Iterable<dynamic>?> deleteDate(List<String> ids) async {
-    return await CachingService.delete(this._cacheKey, ids: ids);
+    return await CachingService.delete(this.cacheKey, ids: ids);
   }
 
   Future<List<T>> getListCached<T>({
@@ -119,7 +119,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     bool Function(Map<String, dynamic> json)? deleteFunction,
   }) async {
     final data = await CachingService.getList(
-      this._cacheKey,
+      this.cacheKey,
       deleteFunction: deleteFunction,
       reversed: reversed,
     );
@@ -136,7 +136,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
   Future<T> getDataCached<T>({
     required T Function(Map<String, dynamic>) fromJson,
   }) async {
-    final json = await CachingService.getData(this._cacheKey);
+    final json = await CachingService.getData(this.cacheKey);
     try {
       return fromJson(json);
     } catch (e) {
@@ -195,7 +195,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     void Function(dynamic second)? onError,
     void Function(dynamic data, CubitStatuses emitState)? onSuccess,
   }) async {
-    final cacheKey = this._cacheKey;
+    final cacheKey = this.cacheKey;
 
     final checkData = await checkCashed(
       state: state,
