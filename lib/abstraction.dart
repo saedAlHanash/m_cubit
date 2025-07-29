@@ -62,8 +62,7 @@ abstract class AbstractState<T> extends Equatable {
 
   bool get delete => cubitCrud == CubitCrud.delete;
 
-  bool get isDataEmpty =>
-      (statuses != CubitStatuses.loading) && (result is List) && ((result as List).isEmpty);
+  bool get isDataEmpty => (statuses != CubitStatuses.loading) && (result is List) && ((result as List).isEmpty);
 }
 
 abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
@@ -117,9 +116,10 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     required T Function(Map<String, dynamic>) fromJson,
     bool? reversed,
     bool Function(Map<String, dynamic> json)? deleteFunction,
+    MCubitCache? cacheKey,
   }) async {
     final data = await CachingService.getList(
-      this.cacheKey,
+      cacheKey ?? this.cacheKey,
       deleteFunction: deleteFunction,
       reversed: reversed,
     );
@@ -135,8 +135,9 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
 
   Future<T> getDataCached<T>({
     required T Function(Map<String, dynamic>) fromJson,
+    MCubitCache? cacheKey,
   }) async {
-    final json = await CachingService.getData(this.cacheKey);
+    final json = await CachingService.getData(cacheKey ?? this.cacheKey);
     try {
       return fromJson(json);
     } catch (e) {

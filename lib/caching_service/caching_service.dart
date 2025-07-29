@@ -124,7 +124,7 @@ class CachingService {
     final box = await getBox(mCubit.nameCache);
 
     for (var d in data) {
-      final keys = box.keys.where((e) => jsonDecode(e)['i'] == d.id);
+      final keys = box.keys.where((e) => jsonDecode(e)['i'] == d.id && jsonDecode(e)['f'] == key.filter);
 
       final item = jsonEncode(d);
 
@@ -247,8 +247,7 @@ class CachingService {
   }
 
   static Future<DateTime?> _latestDate(MCubitCache mCubit) async {
-    return DateTime.tryParse(
-        (await getBox(latestUpdateBox)).get('${mCubit.fixedName}${mCubit.filter}') ?? '');
+    return DateTime.tryParse((await getBox(latestUpdateBox)).get('${mCubit.fixedName}${mCubit.filter}') ?? '');
   }
 
   static Future<NeedUpdateEnum> needGetData(MCubitCache mCubit) async {
