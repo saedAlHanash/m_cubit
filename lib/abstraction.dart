@@ -206,7 +206,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     );
 
     if (checkData.key) {
-      _loggerObject.f('$nameCache stopped on cache');
+      _loggerObject.f('$nameCache stopped on cache \n ${cacheKey.filter}');
       return;
     }
 
