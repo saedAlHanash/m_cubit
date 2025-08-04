@@ -31,9 +31,7 @@ class FilterRequest {
 
   int get filteredCount => filters.length;
 
-  bool get isSearch =>
-      isFiltered &&
-      filters.keys.firstWhereOrNull((e) => e.toLowerCase().contains('name')) != null;
+  bool get isSearch => isFiltered && filters.keys.firstWhereOrNull((e) => e.toLowerCase().contains('name')) != null;
 
   Map<String, dynamic> toJson() => {
         "filters": filters.values.map((x) {
@@ -52,15 +50,14 @@ class FilterRequest {
     return jsonEncode(this).getKey;
   }
 
-  FilterOrderBy? findOrderKey(String id) =>
-      orderBy.firstWhereOrNull((e) => e.attribute == id)?.direction;
+  FilterOrderBy? findOrderKey(String id) => orderBy.firstWhereOrNull((e) => e.attribute == id)?.direction;
 }
 
 class Filter {
   Filter({
     required this.name,
     required this.val,
-    required this.operation,
+    this.operation = FilterOperation.equals,
   });
 
   String name;
