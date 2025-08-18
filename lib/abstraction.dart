@@ -128,6 +128,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
       try {
         return fromJson(e);
       } catch (e) {
+        _loggerObject.e('convert json: $e');
         return fromJson({});
       }
     }).toList();
@@ -141,6 +142,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     try {
       return fromJson(json);
     } catch (e) {
+      _loggerObject.e('convert json: $e');
       return fromJson({});
     }
   }

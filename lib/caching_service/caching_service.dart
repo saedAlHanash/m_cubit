@@ -300,6 +300,7 @@ class CachingService {
         return (data.id.toString().isBlank) ? '' : data.id.toString();
       }
     } catch (e) {
+      _loggerObject.e('_getIdParam: $e');
       return '';
     }
   }
