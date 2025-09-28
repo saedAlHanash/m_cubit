@@ -124,7 +124,7 @@ class CachingService {
     final box = await getBox(mCubit.nameCache);
 
     for (var d in data) {
-      final keys = box.keys.where((e) => jsonDecode(e)['i'] == d.id && jsonDecode(e)['f'] == key.filter);
+      final keys = box.keys.where((e) => jsonDecode(e)['i'] == d.id && (jsonDecode(e)['f'] ?? '') == key.filter);
 
       final item = jsonEncode(d);
 
