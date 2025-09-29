@@ -160,7 +160,7 @@ class CachingService {
     required Box<String> box,
     required CacheKey key,
   }) async {
-    final keys = box.keys.where((e) => jsonDecode(e)['f'] == key.filter);
+    final keys = key.filter.isEmpty ? box.keys : box.keys.where((e) => (jsonDecode(e)['f'] ?? '') == key.filter);
 
     await box.deleteAll(keys);
   }
@@ -304,7 +304,10 @@ class CachingService {
     }
   }
 
-  static Future<void> clearCash(String name) async => await (await getBox(name)).clear();
+  static Future<void> clearCash(String name) async {
+    final box = await getBox(name);
+    await box.deleteAll(box.keys);
+  }
 }
 
 class CacheKey {
