@@ -124,7 +124,7 @@ class CachingService {
     final box = await getBox(mCubit.nameCache);
 
     for (var d in data) {
-      final keys = box.keys.where((e) => jsonDecode(e)['i'] == d.id && jsonDecode(e)['f'] == key.filter);
+      final keys = box.keys.where((e) => jsonDecode(e)['i'] == d.id && (jsonDecode(e)['f'] ?? '') == key.filter);
 
       final item = jsonEncode(d);
 
@@ -160,7 +160,7 @@ class CachingService {
     required Box<String> box,
     required CacheKey key,
   }) async {
-    final keys = box.keys.where((e) => jsonDecode(e)['f'] == key.filter);
+    final keys = key.filter.isEmpty ? box.keys : box.keys.where((e) => (jsonDecode(e)['f'] ?? '') == key.filter);
 
     await box.deleteAll(keys);
   }
@@ -298,12 +298,14 @@ class CachingService {
         return (data.id.toString().isBlank) ? '' : data.id.toString();
       }
     } catch (e) {
-      _loggerObject.e('_getIdParam: $e');
       return '';
     }
   }
 
-  static Future<void> clearCash(String name) async => await (await getBox(name)).clear();
+  static Future<void> clearCash(String name) async {
+    final box = await getBox(name);
+    await box.deleteAll(box.keys);
+  }
 }
 
 class CacheKey {
