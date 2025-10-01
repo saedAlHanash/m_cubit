@@ -205,10 +205,8 @@ class CachingService {
         final keyCache = CacheKey.fromJson(jsonDecode(listKeys[i]));
 
         if (keyCache.version != _version) {
-          listKeys.removeAt(i);
-          await box.deleteAt(i);
-          i -= 1;
-          continue;
+          await clearCash(mCubit.nameCache);
+          break;
         }
 
         if (deleteFunction != null) {
@@ -225,10 +223,10 @@ class CachingService {
           if (firstFound) break;
         }
       } catch (e) {
+        _loggerObject.e('_findKey: $e');
         listKeys.removeAt(i);
         await box.deleteAt(i);
         i -= 1;
-        _loggerObject.e('_findKey: $e');
       }
     }
 
