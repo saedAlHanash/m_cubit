@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 import 'package:m_cubit/util.dart';
@@ -20,7 +21,7 @@ var _loggerObject = Logger(
   ),
 );
 
-enum CubitStatuses { init, loading, noLoading, done, error }
+enum CubitStatuses { init, loading, noLoading, paginationLoading, done, error }
 
 enum CubitCrud { get, create, update, delete }
 
@@ -54,6 +55,8 @@ abstract class AbstractState<T> extends Equatable {
 
   bool get noLoading => statuses == CubitStatuses.noLoading;
 
+  bool get paginationLoading => statuses == CubitStatuses.paginationLoading;
+
   bool get done => statuses == CubitStatuses.done;
 
   bool get create => cubitCrud == CubitCrud.create;
@@ -72,9 +75,13 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
 
   String get filter => '';
 
+  dynamic get mState;
+
   int get timeInterval => time;
 
   bool get withSupperFilet => true;
+
+  final scrollController = ScrollController();
 
   MCubitCache get cacheKey => MCubitCache(
         nameCache: withSupperFilet ? '${mSupperFilter ?? ''}-$nameCache' : nameCache,
@@ -83,7 +90,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
       );
 
   Future<NeedUpdateEnum> _needGetData() async {
-    return await CachingService.needGetData(this.cacheKey);
+    return await CachingService.needGetData(cacheKey);
   }
 
   Future<void> saveData(
@@ -105,11 +112,11 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
   }
 
   Future<Iterable<dynamic>?> addOrUpdateDate(List<dynamic> data) async {
-    return await CachingService.addOrUpdate(this.cacheKey, data: data);
+    return await CachingService.addOrUpdate(cacheKey, data: data);
   }
 
   Future<Iterable<dynamic>?> deleteDate(List<String> ids) async {
-    return await CachingService.delete(this.cacheKey, ids: ids);
+    return await CachingService.delete(cacheKey, ids: ids);
   }
 
   Future<List<T>> getListCached<T>({
@@ -148,26 +155,23 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
   }
 
   Future<MapEntry<bool, dynamic>> checkCashed<T>({
-    required dynamic state,
     required T Function(Map<String, dynamic>) fromJson,
     bool? newData,
     void Function(dynamic data, CubitStatuses emitState)? onSuccess,
   }) async {
     dynamic data;
 
-    if (state.result is List) {
+    if (mState?.result is List) {
       data = await getListCached(fromJson: fromJson);
     } else {
       data = await getDataCached(fromJson: fromJson);
     }
 
-    final mState = state.copyWith(result: data);
-
     if (newData == true || nameCache.isEmpty) {
       if (onSuccess != null) {
         onSuccess.call(data, CubitStatuses.loading);
       } else {
-        emit(mState.copyWith(statuses: CubitStatuses.loading));
+        emit(mState?.copyWith(statuses: CubitStatuses.loading, result: data));
       }
 
       return MapEntry(false, mState);
@@ -179,7 +183,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
       if (onSuccess != null) {
         onSuccess.call(data, cacheType.getState);
       } else {
-        emit(mState.copyWith(statuses: cacheType.getState));
+        emit(mState?.copyWith(statuses: cacheType.getState, result: data));
       }
 
       return MapEntry(cacheType == NeedUpdateEnum.no, mState);
@@ -192,16 +196,14 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
 
   Future<void> getDataAbstract<T>({
     required T Function(Map<String, dynamic>) fromJson,
-    required dynamic state,
     required Function getDataApi,
     bool? newData,
     void Function(dynamic second)? onError,
-    void Function(dynamic data, CubitStatuses emitState)? onSuccess,
+    void Function(dynamic data, CubitStatuses emitState, {Map<String, dynamic>? json})? onSuccess,
   }) async {
     final cacheKey = this.cacheKey;
 
     final checkData = await checkCashed(
-      state: state,
       fromJson: fromJson,
       newData: newData,
       onSuccess: onSuccess,
@@ -242,20 +244,28 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
 
   Future<void> getFromCache<T>({
     required T Function(Map<String, dynamic>) fromJson,
-    required dynamic state,
     required void Function(dynamic data) onSuccess,
   }) async {
     dynamic data;
 
-    if (state.result is List) {
+    if (mState?.result is List) {
       data = await getListCached(fromJson: fromJson);
     } else {
       data = await getDataCached(fromJson: fromJson);
     }
 
     onSuccess.call(data);
+  }
 
-    // emit(state.copyWith(result: data));
+  void scrollListener() {
+    final position = scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 5) {}
+  }
+
+  @override
+  Future<void> close() {
+    scrollController.dispose();
+    return super.close();
   }
 }
 
