@@ -138,6 +138,8 @@ class PaginationMeta {
 
   bool get haveNext => currentPage < lastPage;
 
+  String get getKey => '$currentPage$perPage'.hashCode.toString();
+
   factory PaginationMeta.fromJson(Map<String, dynamic> json) {
     return PaginationMeta(
       currentPage: json["current_page"] ?? 0,

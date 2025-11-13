@@ -23,6 +23,7 @@ var _loggerObject = Logger(
 );
 
 String get latestUpdateBox => '${mSupperFilter ?? ''}-latestUpdateBox';
+String _dfName = 'defaultBox';
 
 var _version = 1;
 
@@ -33,6 +34,17 @@ String? mSupperFilter;
 void Function(dynamic state)? onErrorFun;
 
 class CachingService {
+  static Future<void> addInBucket({String? bucket, required Map<String, String> map}) async {
+    final box = await getBox(bucket ?? _dfName);
+
+    await box.putAll(map);
+  }
+
+  static Future<String?> getFromBucket({String? bucket, required String key}) async {
+    final box = await getBox(bucket ?? _dfName);
+    return box.get(key);
+  }
+
   static Future<void> initial({
     int? version,
     String? path,
@@ -49,6 +61,11 @@ class CachingService {
     onErrorFun = onError;
 
     await Hive.initFlutter(path);
+    if (await getFromBucket(key: 'version') != _version.toString()) {
+      await clearCash(_dfName);
+      final box = await getBox(_dfName);
+      await box.put('version', _version.toString());
+    }
   }
 
   static void setSupperFilter(String supperFilter) => mSupperFilter = supperFilter;
@@ -305,6 +322,7 @@ class CachingService {
   static Future<void> clearCash(String name) async {
     final box = await getBox(name);
     await box.deleteAll(box.keys);
+    await box.flush();
   }
 }
 

@@ -55,11 +55,7 @@ extension McubitStringH on String {
   }
 
   String get getKey {
-    // var bytes = utf8.encode(this);
-    // var digest = md5.convert(bytes);
-    // var digest1 = sha1.convert(bytes);
     var digest2 = hashCode.toString();
-
     return digest2.maxLength(10);
   }
 }
