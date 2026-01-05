@@ -1,3 +1,4 @@
+// استيراد المكتبات اللازمة
 import 'dart:async';
 import 'dart:convert';
 
@@ -8,31 +9,39 @@ import 'package:logger/logger.dart';
 import '../abstraction.dart';
 import '../util.dart';
 
+// كائن لتسجيل الأخطاء والملاحظات
 var _loggerObject = Logger(
   printer: PrettyPrinter(
     methodCount: 0,
-    // number of method calls to be displayed
+    // عدد استدعاءات الدوال التي سيتم عرضها
     errorMethodCount: 0,
-    // number of method calls if stacktrace is provided
+    // عدد استدعاءات الدوال في حال وجود تتبع للأخطاء
     lineLength: 300,
-    // width of the output
+    // عرض المخرجات
     colors: true,
-    // Colorful log messages
+    // رسائل سجل ملونة
     printEmojis: false,
   ),
 );
 
+// اسم الصندوق الذي يخزن آخر تحديث
 String get latestUpdateBox => '${mSupperFilter ?? ''}-latestUpdateBox';
 
+// إصدار الكاش
 var _version = 1;
 
+// مدة صلاحية الكاش بالثواني
 var time = 60;
 
+// فلتر إضافي يمكن استخدامه
 String? mSupperFilter;
 
+// دالة لمعالجة الأخطاء
 void Function(dynamic state)? onErrorFun;
 
+// خدمة التخزين المؤقت
 class CachingService {
+  // تهيئة خدمة التخزين المؤقت
   static Future<void> initial({
     int? version,
     String? path,
@@ -51,8 +60,10 @@ class CachingService {
     await Hive.initFlutter(path);
   }
 
+  // تعيين الفلتر الإضافي
   static void setSupperFilter(String supperFilter) => mSupperFilter = supperFilter;
 
+  // تحديث وقت آخر تحديث للكائن
   static Future<void> _updateLatestUpdateBox(MCubitCache mCubit) async {
     await (await getBox(latestUpdateBox)).put(
       '${mCubit.fixedName}${mCubit.filter}',
@@ -60,6 +71,7 @@ class CachingService {
     );
   }
 
+  // حفظ البيانات في الكاش
   static Future<void> saveData(
     MCubitCache mCubit, {
     required dynamic data,
@@ -108,6 +120,7 @@ class CachingService {
     await box.put(key.jsonString, jsonEncode(data));
   }
 
+  // إضافة أو تحديث البيانات في الكاش
   static Future<Iterable<dynamic>?> addOrUpdate(
     MCubitCache mCubit, {
     required List<dynamic> data,
@@ -130,7 +143,7 @@ class CachingService {
 
       final mapUpdate = Map.fromEntries(keys.map((key) => MapEntry(key, item)));
 
-      //if not found the operation is add
+      // إذا لم يتم العثور على العنصر، تكون العملية إضافة
       if (mapUpdate.isEmpty) mapUpdate[key.jsonString] = item;
 
       await box.putAll(mapUpdate);
@@ -139,6 +152,7 @@ class CachingService {
     return await getList(mCubit);
   }
 
+  // حذف البيانات من الكاش
   static Future<Iterable<dynamic>?> delete(
     MCubitCache mCubit, {
     required List<String> ids,
@@ -156,6 +170,7 @@ class CachingService {
     return await getList(mCubit);
   }
 
+  // مسح المفاتيح حسب المعرف
   static Future<void> clearKeysId({
     required Box<String> box,
     required CacheKey key,
@@ -165,6 +180,7 @@ class CachingService {
     await box.deleteAll(keys);
   }
 
+  // جلب قائمة من الكاش
   static Future<Iterable<dynamic>> getList(
     MCubitCache mCubit, {
     bool Function(Map<String, dynamic> json)? deleteFunction,
@@ -177,6 +193,7 @@ class CachingService {
     return listKeys.map((i) => jsonDecode(box.getAt(i) ?? '{}'));
   }
 
+  // جلب بيانات من الكاش
   static Future<dynamic> getData(MCubitCache mCubit) async {
     final box = await getBox(mCubit.nameCache);
     final listKeys = await _findKey(mCubit, firstFound: true);
@@ -184,10 +201,12 @@ class CachingService {
     return listKeys.map((i) => jsonDecode(box.getAt(i) ?? '{}')).firstOrNull;
   }
 
+  // جلب صندوق Hive
   static Future<Box<String>> getBox(String name) async {
     return Hive.isBoxOpen(name) ? Hive.box<String>(name) : await Hive.openBox<String>(name);
   }
 
+  // البحث عن المفتاح في الكاش
   static Future<List<int>> _findKey(
     MCubitCache mCubit, {
     bool firstFound = false,
@@ -244,57 +263,61 @@ class CachingService {
     return sortedEntries.map((e) => e.key).toList();
   }
 
+  // جلب تاريخ آخر تحديث
   static Future<DateTime?> _latestDate(MCubitCache mCubit) async {
     return DateTime.tryParse((await getBox(latestUpdateBox)).get('${mCubit.fixedName}${mCubit.filter}') ?? '');
   }
 
+  // التحقق مما إذا كانت هناك حاجة لجلب البيانات
   static Future<NeedUpdateEnum> needGetData(MCubitCache mCubit) async {
-    //latest update
+    // آخر تحديث
     final latest = await _latestDate(mCubit);
 
-    //if null then this is first time -LOADING-
+    // إذا كانت القيمة فارغة، فهذه هي المرة الأولى - تحميل
     if (latest == null) return NeedUpdateEnum.withLoading;
 
-    //find filter key
+    // البحث عن مفتاح الفلتر
     final keyFounded = await _findKey(mCubit, firstFound: true);
 
-    //if empty then this is first time with this key -LOADING-
+    // إذا كانت القائمة فارغة، فهذه هي المرة الأولى مع هذا المفتاح - تحميل
     if (keyFounded.isEmpty) return NeedUpdateEnum.withLoading;
 
-    // if found check time expiration
+    // إذا تم العثور على المفتاح، تحقق من وقت انتهاء الصلاحية
     final d = DateTime.now().difference(latest).inSeconds.abs();
 
-    // Time is Expired..?!  -NO_LOADING-
+    // هل انتهت صلاحية الوقت؟ - لا يوجد تحميل
     if (d > mCubit.timeInterval) return NeedUpdateEnum.noLoading;
 
-    //  Time not expire call api
+    // لم ينته وقت الصلاحية، قم باستدعاء الواجهة البرمجية
     return NeedUpdateEnum.no;
   }
 
+  // جلب المعرف من البيانات
   static String getIdFromData(dynamic data) {
     return _getIdParam(data);
   }
 
+  // جلب المعرف من البيانات
   static String _getIdParam(dynamic data) {
     try {
-      // If json passing
+      // إذا تم تمرير كائن JSON
       if (data is Map) return data['id'] ?? '';
 
-      // If passing list of items
+      // إذا تم تمرير قائمة من العناصر
       if (data is Iterable) {
-        // If no items
+        // إذا لم تكن هناك عناصر
         if (data.isEmpty) return '';
 
-        // If first item string that meaning is the list is [id,id,id...]
-        // Then return first id
+        // إذا كان العنصر الأول عبارة عن سلسلة نصية، فهذا يعني أن القائمة هي [معرف، معرف، معرف...]
+        // ثم قم بإرجاع المعرف الأول
         if (data.first is String) return data.first;
 
         if (data.first is Map) return data.first['id'] ?? '';
 
-        // Get first item and get param .id and convert to string and check if it not blank
+        // جلب العنصر الأول والحصول على المعلمة .id وتحويلها إلى سلسلة نصية والتحقق من أنها ليست فارغة
         return (data.first.id.toString().isBlank) ? '' : data.first.id.toString();
       } else {
-        // Not Lest then it`s single item
+        // إذا لم تكن قائمة، فهذا يعني أنه عنصر واحد
         return (data.id.toString().isBlank) ? '' : data.id.toString();
       }
     } catch (e) {
@@ -302,12 +325,14 @@ class CachingService {
     }
   }
 
+  // مسح الكاش
   static Future<void> clearCash(String name) async {
     final box = await getBox(name);
     await box.deleteAll(box.keys);
   }
 }
 
+// مفتاح الكاش
 class CacheKey {
   CacheKey({
     required this.id,

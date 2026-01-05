@@ -1,25 +1,29 @@
+// استيراد المكتبات اللازمة
 import 'abstraction.dart';
 
+// اتجاه الترتيب
 enum FilterOrderBy {
-  desc,
-  asc,
+  desc, // تنازلي
+  asc, // تصاعدي
 }
 
+// عمليات الفلترة
 enum FilterOperation {
-  equals('Equals'),
-  notEqual('NotEqual'),
-  contains('Contains'),
-  startsWith('StartsWith'),
-  endsWith('EndsWith'),
-  lessThan('LessThan'),
-  lessThanEqual('LessThanEqual'),
-  greaterThan('GreaterThan'),
-  greaterThanEqual('GreaterThanEqual');
+  equals('Equals'), // يساوي
+  notEqual('NotEqual'), // لا يساوي
+  contains('Contains'), // يحتوي على
+  startsWith('StartsWith'), // يبدأ بـ
+  endsWith('EndsWith'), // ينتهي بـ
+  lessThan('LessThan'), // أصغر من
+  lessThanEqual('LessThanEqual'), // أصغر من أو يساوي
+  greaterThan('GreaterThan'), // أكبر من
+  greaterThanEqual('GreaterThanEqual'); // أكبر من أو يساوي
 
   const FilterOperation(this.realName);
 
   final String realName;
 
+  // الحصول على العملية بالاسم
   static FilterOperation byName(String s) {
     switch (s) {
       case 'Equals':
@@ -46,14 +50,18 @@ enum FilterOperation {
   }
 }
 
+// حالات الحاجة إلى تحديث
 enum NeedUpdateEnum { no, withLoading, noLoading }
 
+// امتدادات مساعدة للسلاسل النصية
 extension McubitStringH on String {
+  // تحديد أقصى طول للسلسلة النصية
   String maxLength(int l) {
     if (length > l) return substring(0, l);
     return this;
   }
 
+  // الحصول على مفتاح فريد
   String get getKey {
     // var bytes = utf8.encode(this);
     // var digest = md5.convert(bytes);
@@ -64,7 +72,9 @@ extension McubitStringH on String {
   }
 }
 
+// امتدادات مساعدة للسلاسل النصية القابلة للإلغاء
 extension StringHelper on String? {
+  // التحقق مما إذا كانت السلسلة النصية فارغة
   bool get isBlank {
     if (this == null) return true;
     if (this == 'null') return true;
@@ -72,11 +82,15 @@ extension StringHelper on String? {
   }
 }
 
+// امتدادات مساعدة لحالات الحاجة إلى تحديث
 extension NeedUpdateEnumH on NeedUpdateEnum {
+  // التحقق مما إذا كان هناك تحميل
   bool get loading => this == NeedUpdateEnum.withLoading;
 
+  // التحقق مما إذا كانت هناك بيانات
   bool get haveData => this == NeedUpdateEnum.no || this == NeedUpdateEnum.noLoading;
 
+  // الحصول على حالة Cubit
   CubitStatuses get getState {
     switch (this) {
       case NeedUpdateEnum.no:
