@@ -1,3 +1,4 @@
+// استيراد المكتبات اللازمة
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
@@ -6,24 +7,28 @@ import 'package:m_cubit/util.dart';
 import 'caching_service/caching_service.dart';
 import 'command.dart';
 
+// كائن لتسجيل الأخطاء والملاحظات
 var _loggerObject = Logger(
   printer: PrettyPrinter(
     methodCount: 0,
-    // number of method calls to be displayed
+    // عدد استدعاءات الدوال التي سيتم عرضها
     errorMethodCount: 0,
-    // number of method calls if stacktrace is provided
+    // عدد استدعاءات الدوال في حال وجود تتبع للأخطاء
     lineLength: 300,
-    // width of the output
+    // عرض المخرجات
     colors: true,
-    // Colorful log messages
+    // رسائل سجل ملونة
     printEmojis: false,
   ),
 );
 
+// حالات Cubit
 enum CubitStatuses { init, loading, noLoading, done, error }
 
+// عمليات CRUD لـ Cubit
 enum CubitCrud { get, create, update, delete }
 
+// الحالة المجردة لـ Cubit
 abstract class AbstractState<T> extends Equatable {
   final CubitStatuses statuses;
   final CubitCrud cubitCrud;
@@ -34,6 +39,7 @@ abstract class AbstractState<T> extends Equatable {
   final dynamic id;
   final dynamic createUpdateRequest;
 
+  // الحصول على مفتاح الفلتر
   String get filter {
     final f = filterRequest?.getKey ?? request?.toString().getKey ?? id?.toString().getKey ?? '';
     return f;
@@ -50,44 +56,60 @@ abstract class AbstractState<T> extends Equatable {
     required this.result,
   });
 
+  // التحقق مما إذا كانت الحالة قيد التحميل
   bool get loading => statuses == CubitStatuses.loading;
 
+  // التحقق مما إذا كانت الحالة لا تتطلب تحميل
   bool get noLoading => statuses == CubitStatuses.noLoading;
 
+  // التحقق مما إذا كانت الحالة قد انتهت
   bool get done => statuses == CubitStatuses.done;
 
+  // التحقق مما إذا كانت العملية هي إنشاء
   bool get create => cubitCrud == CubitCrud.create;
 
+  // التحقق مما إذا كانت العملية هي تحديث
   bool get update => cubitCrud == CubitCrud.update;
 
+  // التحقق مما إذا كانت العملية هي حذف
   bool get delete => cubitCrud == CubitCrud.delete;
 
+  // التحقق مما إذا كانت البيانات فارغة
   bool get isDataEmpty => (statuses != CubitStatuses.loading) && (result is List) && ((result as List).isEmpty);
 }
 
+// Cubit مجرد
 abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
   MCubit(super.initialState);
 
+  // اسم الكاش
   String get nameCache => '';
 
+  // الفلتر
   String get filter => '';
 
+  // الحالة الحالية
   dynamic get mState;
 
+  // الفترة الزمنية
   int get timeInterval => time;
 
+  // استخدام الفلتر الإضافي
   bool get withSupperFilet => true;
 
+  // مفتاح الكاش
   MCubitCache get cacheKey => MCubitCache(
         nameCache: withSupperFilet ? '${mSupperFilter ?? ''}-$nameCache' : nameCache,
         filter: filter,
         timeInterval: timeInterval,
       );
 
+  // التحقق مما إذا كانت هناك حاجة لجلب البيانات
   Future<NeedUpdateEnum> _needGetData() async {
     return await CachingService.needGetData(this.cacheKey);
   }
 
+  // حفظ البيانات
   Future<void> saveData(
     dynamic data, {
     bool clearId = true,
@@ -102,18 +124,22 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     );
   }
 
+  // مسح الكاش
   Future<void> clearCash() async {
     await CachingService.clearCash(nameCache);
   }
 
+  // إضافة أو تحديث البيانات
   Future<Iterable<dynamic>?> addOrUpdateDate(List<dynamic> data) async {
     return await CachingService.addOrUpdate(this.cacheKey, data: data);
   }
 
+  // حذف البيانات
   Future<Iterable<dynamic>?> deleteDate(List<String> ids) async {
     return await CachingService.delete(this.cacheKey, ids: ids);
   }
 
+  // جلب قائمة من الكاش
   Future<List<T>> getListCached<T>({
     required T Function(Map<String, dynamic>) fromJson,
     bool? reversed,
@@ -136,6 +162,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     }).toList();
   }
 
+  // جلب بيانات من الكاش
   Future<T> getDataCached<T>({
     required T Function(Map<String, dynamic>) fromJson,
     MCubitCache? cacheKey,
@@ -149,6 +176,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     }
   }
 
+  // التحقق من الكاش
   Future<MapEntry<bool, dynamic>> checkCashed<T>({
     required dynamic state,
     required T Function(Map<String, dynamic>) fromJson,
@@ -192,6 +220,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     }
   }
 
+  // جلب البيانات بشكل مجرد
   Future<void> getDataAbstract<T>({
     required T Function(Map<String, dynamic>) fromJson,
     required dynamic state,
@@ -242,6 +271,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     }
   }
 
+  // جلب البيانات من الكاش
   Future<void> getFromCache<T>({
     required T Function(Map<String, dynamic>) fromJson,
     required dynamic state,
@@ -261,11 +291,13 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
   }
 }
 
+// مفتاح الكاش
 class MCubitCache {
   final String nameCache;
   final String filter;
   int timeInterval;
 
+  // الحصول على الاسم الثابت
   String get fixedName => nameCache.replaceAll(mSupperFilter ?? '', '');
 
   MCubitCache({
