@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M_Cubit Activity Diagram (EN)</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <h1>getDataAbstract() Workflow</h1>
+    <pre class="mermaid">
+        activityDiagram
+            title Workflow for getDataAbstract Method
+
+            start
+            :Call checkCashed();
+            :Load data from local cache;
+            :Emit Loading State to UI;
+            :Check if cache is stale (needGetData);
+
+            if (Cache is valid and not stale?) then (yes)
+                :Stop Execution;
+                stop
+            else (no)
+                :Call getDataApi();
+                if (API call successful?) then (yes)
+                    :Save new data to cache;
+                    :Emit Done State with new data;
+                else (no)
+                    :Emit Error State with message;
+                endif
+                stop
+            endif
+    </pre>
+    <script>
+        mermaid.initialize({ startOnLoad: true });
+    </script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M_Cubit State Diagram (EN)</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <h1>CubitStatuses Lifecycle</h1>
+    <pre class="mermaid">
+        stateDiagram-v2
+            direction LR
+            [*] --> init: Initial State
+
+            init --> loading: fetchData() is called
+            init --> noLoading: fetchData() is called (with existing cache)
+
+            loading --> done: API call succeeds
+            loading --> error: API call fails
+
+            noLoading --> done: Background fetch succeeds
+            noLoading --> error: Background fetch fails
+
+            done --> loading: refreshData() is called
+            error --> loading: retry() is called
+
+            note right of init
+                The Cubit starts in the 'init' state.
+            end note
+
+            note right of loading
+                The 'loading' state indicates a mandatory data fetch is in progress.
+                The 'noLoading' state is similar but occurs when stale cache is
+                displayed while a background fetch happens.
+            end note
+    </pre>
+    <script>
+        mermaid.initialize({ startOnLoad: true });
+    </script>
+</body>
+</html>

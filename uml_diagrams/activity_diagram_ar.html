@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M_Cubit مخطط النشاط (AR)</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            direction: rtl;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <h1>getDataAbstract() سير عمل</h1>
+    <pre class="mermaid">
+        activityDiagram
+            title سير عمل دالة getDataAbstract
+
+            start
+            :استدعاء ()checkCashed;
+            :تحميل البيانات من الذاكرة المؤقتة المحلية;
+            :إرسال حالة التحميل إلى واجهة المستخدم;
+            :التحقق من صلاحية الذاكرة المؤقتة (needGetData);
+
+            if (هل الذاكرة المؤقتة صالحة وغير قديمة؟) then (نعم)
+                :إيقاف التنفيذ;
+                stop
+            else (لا)
+                :استدعاء ()getDataApi;
+                if (هل استدعاء الـ API ناجح؟) then (نعم)
+                    :حفظ البيانات الجديدة في الذاكرة المؤقتة;
+                    :إرسال حالة الاكتمال مع البيانات الجديدة;
+                else (لا)
+                    :إرسال حالة الخطأ مع رسالة;
+                endif
+                stop
+            endif
+    </pre>
+    <script>
+        mermaid.initialize({ startOnLoad: true });
+    </script>
+</body>
+</html>
