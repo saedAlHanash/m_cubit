@@ -1,7 +1,4 @@
-import 'dart:convert';
-
 import 'package:equatable/equatable.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 import 'package:m_cubit/util.dart';
@@ -32,26 +29,23 @@ abstract class AbstractState<T> extends Equatable {
   final CubitCrud cubitCrud;
   final String error;
   final T result;
-  // final PaginationMeta? meta;
-
+  final FilterRequest? filterRequest;
   final dynamic request;
   final dynamic id;
   final dynamic createUpdateRequest;
 
   String get filter {
-    final f = '${request?.toString().getKey ?? id?.toString().getKey ?? ''}';
+    final f = filterRequest?.getKey ?? request?.toString().getKey ?? id?.toString().getKey ?? '';
     return f;
   }
-
-  final ScrollController? scrollController;
 
   const AbstractState({
     this.statuses = CubitStatuses.init,
     this.cubitCrud = CubitCrud.get,
     this.error = '',
+    this.filterRequest,
     this.request,
     this.createUpdateRequest,
-    this.scrollController,
     this.id,
     required this.result,
   });
@@ -71,24 +65,18 @@ abstract class AbstractState<T> extends Equatable {
   bool get isDataEmpty => (statuses != CubitStatuses.loading) && (result is List) && ((result as List).isEmpty);
 }
 
-abstract class MCubit<T> extends Cubit<T> {
+abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
   MCubit(super.initialState);
-
-  //region overwrite
-
-  AbstractState? get mState => null;
 
   String get nameCache => '';
 
   String get filter => '';
 
+  dynamic get mState;
+
   int get timeInterval => time;
 
   bool get withSupperFilet => true;
-
-  Function()? get onNext => null;
-
-  //endregion
 
   MCubitCache get cacheKey => MCubitCache(
         nameCache: withSupperFilet ? '${mSupperFilter ?? ''}-$nameCache' : nameCache,
@@ -97,7 +85,7 @@ abstract class MCubit<T> extends Cubit<T> {
       );
 
   Future<NeedUpdateEnum> _needGetData() async {
-    return await CachingService.needGetData(cacheKey);
+    return await CachingService.needGetData(this.cacheKey);
   }
 
   Future<void> saveData(
@@ -119,15 +107,15 @@ abstract class MCubit<T> extends Cubit<T> {
   }
 
   Future<Iterable<dynamic>?> addOrUpdateDate(List<dynamic> data) async {
-    return await CachingService.addOrUpdate(cacheKey, data: data);
+    return await CachingService.addOrUpdate(this.cacheKey, data: data);
   }
 
   Future<Iterable<dynamic>?> deleteDate(List<String> ids) async {
-    return await CachingService.delete(cacheKey, ids: ids);
+    return await CachingService.delete(this.cacheKey, ids: ids);
   }
 
-  Future<List<R>> getListCached<R>({
-    required R Function(Map<String, dynamic>) fromJson,
+  Future<List<T>> getListCached<T>({
+    required T Function(Map<String, dynamic>) fromJson,
     bool? reversed,
     bool Function(Map<String, dynamic> json)? deleteFunction,
     MCubitCache? cacheKey,
@@ -148,8 +136,8 @@ abstract class MCubit<T> extends Cubit<T> {
     }).toList();
   }
 
-  Future<R> getDataCached<R>({
-    required R Function(Map<String, dynamic>) fromJson,
+  Future<T> getDataCached<T>({
+    required T Function(Map<String, dynamic>) fromJson,
     MCubitCache? cacheKey,
   }) async {
     final json = await CachingService.getData(cacheKey ?? this.cacheKey);
@@ -161,12 +149,9 @@ abstract class MCubit<T> extends Cubit<T> {
     }
   }
 
-  /// Chack if need to update data from server
-  /// Emit data to state and if(onSuccess != null) just call it
-  ///
-  Future<MapEntry<bool, dynamic>> checkCashedIfStopOnCash<R>({
+  Future<MapEntry<bool, dynamic>> checkCashed<T>({
     required dynamic state,
-    required R Function(Map<String, dynamic>) fromJson,
+    required T Function(Map<String, dynamic>) fromJson,
     bool? newData,
     void Function(dynamic data, CubitStatuses emitState)? onSuccess,
   }) async {
@@ -207,8 +192,8 @@ abstract class MCubit<T> extends Cubit<T> {
     }
   }
 
-  Future<void> getDataAbstract<R>({
-    required R Function(Map<String, dynamic>) fromJson,
+  Future<void> getDataAbstract<T>({
+    required T Function(Map<String, dynamic>) fromJson,
     required dynamic state,
     required Function getDataApi,
     bool? newData,
@@ -217,41 +202,32 @@ abstract class MCubit<T> extends Cubit<T> {
   }) async {
     final cacheKey = this.cacheKey;
 
-    //التحقق من ان الكاش يكفي
-    final checkData = await checkCashedIfStopOnCash(
+    final checkData = await checkCashed(
       state: state,
       fromJson: fromJson,
       newData: newData,
       onSuccess: onSuccess,
     );
 
-    //الكاش كافي ولا داعي للذهاب لل سيرفر
     if (checkData.key) {
       _loggerObject.f('$nameCache stopped on cache \n ${cacheKey.filter}');
       return;
     }
 
-    // اذهب لل سيرفر
     final pair = await getDataApi.call();
 
-    if (isClosed) return;
-
-    // يوجد خطا
     if (pair.first == null) {
-      // ال checkData.value  هي State
+      if (isClosed) return;
+
       final s = checkData.value.copyWith(statuses: CubitStatuses.error, error: pair.second);
 
       emit(s);
 
-      if (onError == null) onErrorFun?.call(s);
-
+      if (onError == null) {
+        onErrorFun?.call(s);
+      }
       onError?.call(pair.second);
     } else {
-      if (!pair.second.toString().isBlank) {
-        // final meta = PaginationMeta.fromJson(jsonDecode(pair.second));
-        // await CachingService.addInBucket(bucket: 'meta', map: {filter: jsonEncode(meta.toJson())});
-      }
-
       await saveData(
         pair.first,
         cacheKey: cacheKey,
@@ -266,8 +242,8 @@ abstract class MCubit<T> extends Cubit<T> {
     }
   }
 
-  Future<void> getFromCache<R>({
-    required R Function(Map<String, dynamic>) fromJson,
+  Future<void> getFromCache<T>({
+    required T Function(Map<String, dynamic>) fromJson,
     required dynamic state,
     required void Function(dynamic data) onSuccess,
   }) async {
@@ -283,19 +259,6 @@ abstract class MCubit<T> extends Cubit<T> {
 
     // emit(state.copyWith(result: data));
   }
-
-  void scrollListener() {
-    final position = mState?.scrollController?.position;
-    if (position == null) return;
-    if (position.pixels >= (position.maxScrollExtent - 5)) {
-      onNext?.call();
-    }
-  }
-
-  // Future<PaginationMeta> get getMeta async {
-  //   final savedJson = (await CachingService.getFromBucket(bucket: 'meta', key: filter)) ?? '{}';
-  //   return PaginationMeta.fromJson(jsonDecode(savedJson));
-  // }
 }
 
 class MCubitCache {
