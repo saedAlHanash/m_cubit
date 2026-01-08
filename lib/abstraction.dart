@@ -32,14 +32,14 @@ abstract class AbstractState<T> extends Equatable {
   final CubitCrud cubitCrud;
   final String error;
   final T result;
-  final PaginationMeta? meta;
+  // final PaginationMeta? meta;
 
   final dynamic request;
   final dynamic id;
   final dynamic createUpdateRequest;
 
   String get filter {
-    final f = '${meta?.getKey ?? ''}${request?.toString().getKey ?? id?.toString().getKey ?? ''}';
+    final f = '${request?.toString().getKey ?? id?.toString().getKey ?? ''}';
     return f;
   }
 
@@ -49,8 +49,6 @@ abstract class AbstractState<T> extends Equatable {
     this.statuses = CubitStatuses.init,
     this.cubitCrud = CubitCrud.get,
     this.error = '',
-    this.meta,
-    // this.filterRequest,
     this.request,
     this.createUpdateRequest,
     this.scrollController,
@@ -250,8 +248,8 @@ abstract class MCubit<T> extends Cubit<T> {
       onError?.call(pair.second);
     } else {
       if (!pair.second.toString().isBlank) {
-        final meta = PaginationMeta.fromJson(jsonDecode(pair.second));
-        await CachingService.addInBucket(bucket: 'meta', map: {filter: jsonEncode(meta.toJson())});
+        // final meta = PaginationMeta.fromJson(jsonDecode(pair.second));
+        // await CachingService.addInBucket(bucket: 'meta', map: {filter: jsonEncode(meta.toJson())});
       }
 
       await saveData(
@@ -294,10 +292,10 @@ abstract class MCubit<T> extends Cubit<T> {
     }
   }
 
-  Future<PaginationMeta> get getMeta async {
-    final savedJson = (await CachingService.getFromBucket(bucket: 'meta', key: filter)) ?? '{}';
-    return PaginationMeta.fromJson(jsonDecode(savedJson));
-  }
+  // Future<PaginationMeta> get getMeta async {
+  //   final savedJson = (await CachingService.getFromBucket(bucket: 'meta', key: filter)) ?? '{}';
+  //   return PaginationMeta.fromJson(jsonDecode(savedJson));
+  // }
 }
 
 class MCubitCache {
