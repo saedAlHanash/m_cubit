@@ -24,6 +24,7 @@ var _loggerObject = Logger(
 
 String get latestUpdateBox => '${mSupperFilter ?? ''}-latestUpdateBox';
 String _dfName = 'defaultBox';
+String _cacheableInterface = 'cacheableInterface';
 
 var _version = 1;
 
@@ -34,10 +35,18 @@ String? mSupperFilter;
 void Function(dynamic state)? onErrorFun;
 
 class CachingService {
+  //region Bucket
+
   static Future<void> addInBucket({String? bucket, required Map<String, String> map}) async {
     final box = await getBox(bucket ?? _dfName);
 
     await box.putAll(map);
+  }
+
+  static Future<void> addInBucketJson({required String key, required String jsonEncode}) async {
+    final box = await getBox(_dfName);
+
+    await box.put(key, jsonEncode);
   }
 
   static Future<String?> getFromBucket({String? bucket, required String key}) async {
@@ -45,13 +54,47 @@ class CachingService {
     return box.get(key);
   }
 
+  static Future<void> initialOpenBucket(String bucket) async {
+    try {
+      await getBox(bucket);
+    } catch (_) {}
+  }
+
+  static String? getFromBucketSync({
+    String? bucket,
+    required String key,
+  }) {
+    final box = Hive.box(bucket ?? _dfName);
+    if (!box.isOpen) return null;
+    return box.get(key);
+  }
+
+  static Map<String, dynamic> getFromBucketJsonSync({
+    required String key,
+  }) {
+    final box = Hive.box(_dfName);
+    if (!box.isOpen) return {};
+    return jsonDecode(box.get(key) ?? '') ?? <String, dynamic>{};
+  }
+
+  //endregion
+
+  //region Cacheable
+
+  //endregion
+
   static Future<void> initial({
     int? version,
     String? path,
     int? timeInterval,
     String? supperFilter,
+    List<String>? initialOpened,
     required Function(dynamic second)? onError,
   }) async {
+    for (var o in initialOpened ?? []) {
+      await initialOpenBucket(o);
+    }
+
     _version = version ?? 1;
 
     time = timeInterval ?? 180;
