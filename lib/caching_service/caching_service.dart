@@ -60,21 +60,16 @@ class CachingService {
     } catch (_) {}
   }
 
-  static String? getFromBucketSync({
-    String? bucket,
-    required String key,
-  }) {
+  static String? getFromBucketSync({String? bucket, required String key}) {
     final box = Hive.box(bucket ?? _dfName);
     if (!box.isOpen) return null;
     return box.get(key);
   }
 
-  static Map<String, dynamic> getFromBucketJsonSync({
-    required String key,
-  }) {
-    final box = Hive.box(_dfName);
+  static Map<String, dynamic> getFromBucketJsonSync({required String key}) {
+    final box = Hive.box<String>(_dfName);
     if (!box.isOpen) return {};
-    return jsonDecode(box.get(key) ?? '') ?? <String, dynamic>{};
+    return jsonDecode(box.get(key) ?? '{}') ?? <String, dynamic>{};
   }
 
   //endregion
@@ -91,6 +86,7 @@ class CachingService {
     List<String>? initialOpened,
     required Function(dynamic second)? onError,
   }) async {
+    await initialOpenBucket(_dfName);
     for (var o in initialOpened ?? []) {
       await initialOpenBucket(o);
     }

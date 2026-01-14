@@ -163,6 +163,12 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
       data = await getDataCached(fromJson: fromJson);
     }
 
+    // if ((data is! T)) {
+    //   await clearCash();
+    //   _loggerObject.e('Error type : ${T.toString()} / ${data.runtimeType}');
+    //   return checkCashed(state: state, fromJson: fromJson, newData: newData, onSuccess: onSuccess);
+    // }
+
     final mState = state.copyWith(result: data);
 
     if (newData == true || nameCache.isEmpty) {
