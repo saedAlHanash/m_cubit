@@ -140,7 +140,8 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     required T Function(Map<String, dynamic>) fromJson,
     MCubitCache? cacheKey,
   }) async {
-    final json = await CachingService.getData(cacheKey ?? this.cacheKey);
+    final json = (await CachingService.getData(cacheKey ?? this.cacheKey)) ?? {};
+
     try {
       return fromJson(json);
     } catch (e) {
