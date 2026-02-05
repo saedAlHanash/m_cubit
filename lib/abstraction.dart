@@ -128,7 +128,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     if (data.isEmpty) return [];
     return data.map((e) {
       try {
-        return fromJson(e);
+        return fromJson(e??{});
       } catch (e) {
         _loggerObject.e('convert json /$nameCache/: $e');
         return fromJson({});
