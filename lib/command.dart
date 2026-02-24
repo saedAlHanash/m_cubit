@@ -34,16 +34,16 @@ class FilterRequest {
   bool get isSearch => isFiltered && filters.keys.firstWhereOrNull((e) => e.toLowerCase().contains('name')) != null;
 
   Map<String, dynamic> toJson() => {
-        "filters": filters.values.map((x) {
+        'filters': filters.values.map((x) {
           if (x.name.startsWith('_')) {
             x.name = x.name.replaceFirst('_', '');
           }
           return x.toJson();
         }).toList(),
-        "orderBy": orderBy.map((x) => x.toJson()).toList(),
-        "pageableQuery": pageableQuery?.toJson(),
-        "tripId": tripId,
-        "memberId": memberId,
+        'orderBy': orderBy.map((x) => x.toJson()).toList(),
+        'pageableQuery': pageableQuery?.toJson(),
+        'tripId': tripId,
+        'memberId': memberId,
       };
 
   String get getKey {
@@ -66,16 +66,16 @@ class Filter {
 
   factory Filter.fromJson(Map<String, dynamic> json) {
     return Filter(
-      name: json["name"] ?? "",
-      val: json["val"] ?? "",
-      operation: FilterOperation.byName(json["operation"] ?? ''),
+      name: json['name'] ?? '',
+      val: json['val'] ?? '',
+      operation: FilterOperation.byName(json['operation'] ?? ''),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        "name": name,
-        "val": val,
-        "operation": operation.realName,
+        'name': name,
+        'val': val,
+        'operation': operation.realName,
       };
 }
 
@@ -90,14 +90,14 @@ class OrderBy {
 
   factory OrderBy.fromJson(Map<String, dynamic> json) {
     return OrderBy(
-      attribute: json["attribute"] ?? "",
-      direction: FilterOrderBy.values[(json["direction"] ?? 0)],
+      attribute: json['attribute'] ?? '',
+      direction: FilterOrderBy.values[(json['direction'] ?? 0)],
     );
   }
 
   Map<String, dynamic> toJson() => {
-        "attribute": attribute,
-        "direction": direction.name,
+        'attribute': attribute,
+        'direction': direction.name,
       };
 }
 
@@ -112,14 +112,14 @@ class PageableQuery {
 
   factory PageableQuery.fromJson(Map<String, dynamic> json) {
     return PageableQuery(
-      pageNumer: json["pageNumer"] ?? 0,
-      pageSize: json["pageSize"] ?? 0,
+      pageNumer: json['pageNumer'] ?? 0,
+      pageSize: json['pageSize'] ?? 0,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        "pageNumer": pageNumer,
-        "pageSize": pageSize,
+        'pageNumer': pageNumer,
+        'pageSize': pageSize,
       };
 }
 
@@ -142,24 +142,29 @@ class PaginationMeta {
 
   factory PaginationMeta.fromJson(Map<String, dynamic> json) {
     return PaginationMeta(
-      currentPage: json["current_page"] ?? 0,
-      lastPage: json["last_page"] ?? 0,
-      perPage: json["per_page"] ?? 20,
-      total: json["total"] ?? 0,
+      currentPage: json['current_page'] ?? json['currentPage'] ?? 0,
+      lastPage: json['last_page'] ?? json['lastPage'] ?? 0,
+      perPage: json['per_page'] ?? json['perPage'] ?? 20,
+      total: json['total'] ?? 0,
     );
   }
 
   PaginationMeta get next => this..currentPage += 1;
 
   Map<String, dynamic> toJson() => {
-        "current_page": currentPage,
-        "last_page": lastPage,
-        "per_page": perPage,
-        "total": total,
+        'current_page': currentPage,
+        'last_page': lastPage,
+        'per_page': perPage,
+        'currentPage': currentPage,
+        'lastPage': lastPage,
+        'perPage': perPage,
+        'total': total,
       };
 
   Map<String, dynamic> toJsonNext() => {
-        "current_page": currentPage,
-        "per_page": perPage,
+        'current_page': currentPage,
+        'per_page': perPage,
+        'currentPage': currentPage,
+        'perPage': perPage,
       };
 }

@@ -10,10 +10,10 @@ dependencies:
   flutter:
     sdk: flutter
 
-  hive_ce: ^2.15.0
-  hive_ce_flutter: ^2.3.2
+  hive_ce: ^2.19.3
+  hive_ce_flutter: ^2.3.4
   flutter_bloc: ^9.1.1
-  equatable: ^2.0.7
+  equatable: ^2.0.8
   logger: ^2.6.2
   collection: ^1.19.1
 

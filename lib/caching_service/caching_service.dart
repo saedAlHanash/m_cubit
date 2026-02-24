@@ -24,10 +24,9 @@ var _loggerObject = Logger(
 
 String get latestUpdateBox => '${mSupperFilter ?? ''}-latestUpdateBox';
 String _dfName = 'defaultBox';
-String _cacheableInterface = 'cacheableInterface';
+String __v = '__v';
 
 var _version = 1;
-
 var time = 60;
 
 String? mSupperFilter;
@@ -37,15 +36,14 @@ void Function(dynamic state)? onErrorFun;
 class CachingService {
   //region Bucket
 
-  static Future<void> addInBucket({String? bucket, required Map<String, String> map}) async {
-    final box = await getBox(bucket ?? _dfName);
-
-    await box.putAll(map);
+  static Future<void> initialOpenBucket(String bucket) async {
+    try {
+      await getBox(bucket);
+    } catch (_) {}
   }
 
-  static Future<void> addInBucketJson({required String key, required String jsonEncode}) async {
+  static Future<void> addInBucket({required String key, required String jsonEncode}) async {
     final box = await getBox(_dfName);
-
     await box.put(key, jsonEncode);
   }
 
@@ -54,27 +52,17 @@ class CachingService {
     return box.get(key);
   }
 
-  static Future<void> initialOpenBucket(String bucket) async {
-    try {
-      await getBox(bucket);
-    } catch (_) {}
-  }
-
   static String? getFromBucketSync({String? bucket, required String key}) {
-    final box = Hive.box(bucket ?? _dfName);
+    final box = Hive.box<String>(bucket ?? _dfName);
     if (!box.isOpen) return null;
     return box.get(key);
   }
 
-  static Map<String, dynamic> getFromBucketJsonSync({required String key}) {
-    final box = Hive.box<String>(_dfName);
-    if (!box.isOpen) return {};
-    return jsonDecode(box.get(key) ?? '{}') ?? <String, dynamic>{};
-  }
-
-  //endregion
-
-  //region Cacheable
+  // static Map<String, dynamic> getFromBucketJsonSync({required String key}) {
+  //   final box = Hive.box<String>(_dfName);
+  //   if (!box.isOpen) return {};
+  //   return jsonDecode(box.get(key) ?? '{}') ?? <String, dynamic>{};
+  // }
 
   //endregion
 
@@ -86,24 +74,23 @@ class CachingService {
     List<String>? initialOpened,
     required Function(dynamic second)? onError,
   }) async {
+    await Hive.initFlutter(path);
+
     await initialOpenBucket(_dfName);
+
     for (var o in initialOpened ?? []) {
       await initialOpenBucket(o);
     }
 
     _version = version ?? 1;
-
-    time = timeInterval ?? 180;
-
+    time = timeInterval ?? 60;
     mSupperFilter = supperFilter;
-
     onErrorFun = onError;
 
-    await Hive.initFlutter(path);
-    if (await getFromBucket(key: 'version') != _version.toString()) {
+    if (await getFromBucket(key: __v) != _version.toString()) {
       await clearCash(_dfName);
       final box = await getBox(_dfName);
-      await box.put('version', _version.toString());
+      await box.put(__v, _version.toString());
     }
   }
 

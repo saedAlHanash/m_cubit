@@ -128,7 +128,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     if (data.isEmpty) return [];
     return data.map((e) {
       try {
-        return fromJson(e??{});
+        return fromJson(e ?? {});
       } catch (e) {
         _loggerObject.e('convert json /$nameCache/: $e');
         return fromJson({});
@@ -249,7 +249,19 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     }
   }
 
-  Future<void> getFromCache<T>({
+  Future<dynamic> getAndSave<T>({
+    required Function getDataApi,
+  }) async {
+    final pair = await getDataApi.call();
+
+    if (pair.first == null) return null;
+
+    await saveData(pair.first, cacheKey: cacheKey);
+
+    return pair.first;
+  }
+
+  Future<dynamic> getFromCache<T>({
     required T Function(Map<String, dynamic>) fromJson,
     required dynamic state,
     required void Function(dynamic data) onSuccess,
@@ -263,6 +275,8 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     }
 
     onSuccess.call(data);
+
+    return data;
 
     // emit(state.copyWith(result: data));
   }
