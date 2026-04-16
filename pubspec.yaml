@@ -16,6 +16,7 @@ dependencies:
   equatable: ^2.0.8
   logger: ^2.6.2
   collection: ^1.19.1
+  intl:
 
 
 dev_dependencies:
