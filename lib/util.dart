@@ -84,21 +84,22 @@ extension SplitByLength on String {
   int? get tryParseOrNullInt => int.tryParse(this);
 
   bool get tryParseBoolOrFalse => this == '1' || toLowerCase() == 'true';
-}
 
-extension StringHelper on String? {
-  String get fixUrl {
-    if (this == null) return '';
-    if ((this ?? '').startsWith('http')) return this ?? '';
-    final String link = "http://e-learning.testbandtech.com/storage/images/$this";
-    return link;
+  Color get toColor => Color(int.parse('0xff${replaceFirst('#', '')}'));
+
+  Color get idToSafeColor {
+    if (trim().isEmpty) return Colors.black;
+
+    return HSLColor.fromAHSL(1.0, trim().hashCode.abs() % 360, 0.6, 0.6).toColor();
   }
 
-  String? get fixPhone {
-    if (this == null) return null;
-    if ((this ?? '').startsWith('+964')) return this ?? '';
-    final p = this!
-        .replaceAll('٠', '0')
+  bool get isUrl {
+    final uri = Uri.tryParse(this);
+    return uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
+  }
+
+  String get numToEn {
+    return replaceAll('٠', '0')
         .replaceAll('١', '1')
         .replaceAll('٢', '2')
         .replaceAll('٣', '3')
@@ -108,16 +109,12 @@ extension StringHelper on String? {
         .replaceAll('٧', '7')
         .replaceAll('٨', '8')
         .replaceAll('٩', '9');
-
-    return '+964$p'.replaceAll('+9640', '+964');
   }
+}
 
-  String? get getVideoId => this?.split('/').lastOrNull;
-
+extension StringHelper on String? {
   bool get isBlank {
-    if (this == null) return true;
-    if (this == 'null') return true;
-    return this!.trim().isEmpty;
+    return this == null || this!.trim().isEmpty || this!.toLowerCase() == 'null';
   }
 }
 
