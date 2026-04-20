@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M_Cubit مخطط تسلسل (AR)</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            direction: rtl;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <h1>M_Cubit تدفق البيانات في</h1>
+    <pre class="mermaid">
+        sequenceDiagram
+            participant UI as واجهة المستخدم
+            participant Cubit as منطق MCubit
+            participant CachingService as خدمة التخزين المؤقت
+            participant API as واجهة برمجة التطبيقات البعيدة
+
+            UI->>Cubit: 1. إجراء المستخدم يستدعي ()fetchData
+            note over UI: المستخدم يضغط على زر أو يقوم بتحميل شاشة.
+
+            Cubit->>UI: 2. إرسال حالة جديدة (الحالة: جاري التحميل)
+            note over UI: عرض مؤشر تحميل، مع احتمالية عرض بيانات قديمة.
+
+            Cubit->>CachingService: 3. ()checkCashed / ()needGetData
+            note over CachingService: التحقق من وجود بيانات صالحة وغير منتهية الصلاحية.
+
+            alt البيانات مخزنة مؤقتاً وصالحة
+                CachingService-->>Cubit: 4a. إرجاع البيانات المخزنة والصالحة
+                Cubit->>UI: 5a. إرسال حالة جديدة (الحالة: مكتمل، البيانات: من الكاش)
+                note over UI: عرض البيانات مباشرة من الذاكرة المؤقتة. تنتهي العملية هنا.
+            else البيانات قديمة أو غير مخزنة
+                CachingService-->>Cubit: 4b. إبلاغ الـ Cubit بأن الذاكرة المؤقتة تحتاج إلى تحديث
+                Cubit->>API: 5b. طلب البيانات من الخادم البعيد
+                API-->>Cubit: 6. إرجاع استجابة الـ API (نجاح أو فشل)
+
+                alt في حالة نجاح استدعاء الـ API
+                    Cubit->>CachingService: 7a. حفظ البيانات الجديدة ()saveData
+                    note over CachingService: تخزين البيانات الجديدة في الذاكرة المؤقتة المحلية.
+
+                    Cubit->>UI: 8a. إرسال حالة جديدة (الحالة: مكتمل، البيانات: من الـ API)
+                    note over UI: إخفاء مؤشر التحميل وعرض البيانات الجديدة.
+                else في حالة فشل استدعاء الـ API
+                    Cubit->>UI: 7b. إرسال حالة جديدة (الحالة: خطأ، رسالة الخطأ)
+                    note over UI: عرض رسالة خطأ للمستخدم.
+                end
+            end
+    </pre>
+    <script>
+        mermaid.initialize({ startOnLoad: true });
+    </script>
+</body>
+</html>

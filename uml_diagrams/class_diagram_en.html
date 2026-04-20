@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M_Cubit Class Diagram (EN)</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <h1>M_Cubit Class Diagram</h1>
+    <pre class="mermaid">
+        classDiagram
+            direction LR
+
+            class Cubit~S~ {
+                <<flutter_bloc>>
+            }
+
+            class Equatable {
+                <<equatable>>
+            }
+
+            class MCubit~S~ {
+                <<Abstract>>
+                +String nameCache
+                +String filter
+                +getDataAbstract() void
+                +saveData() void
+                +clearCash() void
+                +checkCashed() Future
+            }
+
+            class AbstractState~T~ {
+                <<Abstract>>
+                +CubitStatuses statuses
+                +CubitCrud cubitCrud
+                +String error
+                +T result
+            }
+
+            class CachingService {
+                <<Service>>
+                +needGetData() Future
+                +saveData() void
+                +getList() Future
+                +getData() Future
+            }
+
+            class MCubitCache {
+                +String nameCache
+                +String filter
+                +int timeInterval
+            }
+
+            class CubitStatuses {
+                <<enumeration>>
+                init
+                loading
+                noLoading
+                done
+                error
+            }
+
+            class CubitCrud {
+                <<enumeration>>
+                get
+                create
+                update
+                delete
+            }
+
+            Cubit <|-- MCubit
+            Equatable <|-- AbstractState
+            MCubit "1" o-- "1" MCubitCache : has a
+            MCubit ..> CachingService : depends on
+            MCubit --|> AbstractState : manages
+            AbstractState "1" *-- "1" CubitStatuses : contains
+            AbstractState "1" *-- "1" CubitCrud : contains
+    </pre>
+    <script>
+        mermaid.initialize({ startOnLoad: true });
+    </script>
+</body>
+</html>
