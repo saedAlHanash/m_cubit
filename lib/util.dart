@@ -342,6 +342,13 @@ extension DateUtcHelper on DateTime {
     }
     return dateTimes;
   }
+
+  bool isSameDate(DateTime? date) {
+    if (date == null) return false;
+    return year == date.year && month == date.month && day == date.day;
+  }
+
+  String get formatDateName => DateFormat('dd/$monthName/yyyy').format(this);
 }
 
 extension FirstItem<E> on Iterable<E> {
