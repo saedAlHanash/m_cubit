@@ -1,16 +1,15 @@
-import 'abstraction.dart';
-import 'dart:convert';
-
-import 'package:collection/collection.dart';
-
 import 'package:flutter/material.dart';
-import 'package:collection/collection.dart';
 import 'package:intl/intl.dart';
 import 'package:m_cubit/util.dart';
 
 import 'abstraction.dart';
 
 extension SplitByLength on String {
+  String get fileExtension {
+    if (!contains('.')) return '';
+    return split('.').last.toLowerCase();
+  }
+
   String maxLength(int l) {
     if (length > l) return substring(0, l);
     return this;
@@ -110,6 +109,62 @@ extension SplitByLength on String {
         .replaceAll('٨', '8')
         .replaceAll('٩', '9');
   }
+
+  String get capitalizeFirst => isEmpty ? this : this[0].toUpperCase() + substring(1);
+
+  String get decimalNumbersOnly {
+    final matches = RegExp(r'\d+([.,]\d+)?').allMatches(this);
+    return matches.map((m) => m.group(0)).join(' ');
+  }
+
+  String get toSnakeCase {
+    final regex = RegExp(r'(?<=[a-z])[A-Z]');
+    return replaceAllMapped(regex, (match) => '_${match.group(0)}').toLowerCase();
+  }
+
+  String get toSplitsSpaceCase {
+    final regex = RegExp(r'(?<=[a-z])[A-Z]');
+    return replaceAllMapped(regex, (match) => '_${match.group(0)}').toLowerCase().replaceAll('_', ' ');
+  }
+
+  String get toPascalCase {
+    final words = split('_');
+    return words.map((word) => word[0].toUpperCase() + word.substring(1)).join();
+  }
+
+  String get toCamelCase {
+    final words = split('_');
+    if (words.isEmpty) return '';
+    final capitalized = words.map((word) => word[0].toUpperCase() + word.substring(1)).join();
+    return capitalized[0].toLowerCase() + capitalized.substring(1);
+  }
+
+  Color get colorFromId {
+    final hash = hashCode;
+    final hue = (hash % 360).toDouble(); // 0 → 360
+    const saturation = 0.6; // تشبع متوسط
+    const lightness = 0.5; // سطوع متوسط
+
+    return HSLColor.fromAHSL(1.0, hue, saturation, lightness).toColor();
+  }
+
+  Color get gradeColor {
+    final upperCaseGrade = toUpperCase();
+    if (upperCaseGrade.contains('A')) {
+      return Colors.green;
+    } else if (upperCaseGrade.contains('B')) {
+      return Colors.blue;
+    } else if (upperCaseGrade.contains('C')) {
+      return Colors.yellow;
+    } else if (upperCaseGrade.contains('D')) {
+      return Colors.orange;
+    } else if (upperCaseGrade.contains('F')) {
+      return Colors.red;
+    } else {
+      // Return a default color or throw an error for unknown grades
+      return Colors.grey; // Or throw ArgumentError('Invalid grade: $this');
+    }
+  }
 }
 
 extension StringHelper on String? {
@@ -164,6 +219,14 @@ extension ApiStatusCode on int {
 extension TextEditingControllerHelper on TextEditingController {
   void clear() {
     if (text.isNotEmpty) text = '';
+  }
+}
+
+extension GlobalKeyH on GlobalKey {
+  Size? get getSize {
+    final renderBox = currentContext?.findRenderObject() as RenderBox?;
+    final size = renderBox?.size;
+    return size;
   }
 }
 
