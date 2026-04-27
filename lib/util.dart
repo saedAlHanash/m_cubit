@@ -171,6 +171,34 @@ extension StringHelper on String? {
   bool get isBlank {
     return this == null || this!.trim().isEmpty || this!.toLowerCase() == 'null';
   }
+
+  bool get isNotBlank {
+    return !isBlank;
+  }
+
+  bool get valuedId {
+    if (this == null) return false;
+    var n = int.tryParse(this!) ?? -1;
+    if (n > 0) return true;
+
+    return !isBlank;
+  }
+
+  bool get isIdKey {
+    if (isBlank) return false;
+
+    final text = this!.trim();
+
+    if (text.toLowerCase() == 'id') return true;
+
+    if (text.contains('_')) {
+      return text.split('_').lastOrNull?.toLowerCase() == 'id';
+    }
+
+    final camelParts = text.split(RegExp(r'(?=[A-Z])'));
+
+    return camelParts.lastOrNull?.toLowerCase() == 'id';
+  }
 }
 
 extension MaxIntNulable on num? {
