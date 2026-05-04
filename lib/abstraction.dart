@@ -128,7 +128,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     if (data.isEmpty) return [];
     return data.map((e) {
       try {
-        return fromJson(e ?? {});
+        return fromJson(e ?? ({} as Map<String, dynamic>));
       } catch (e) {
         _loggerObject.e('convert json /$nameCache/: $e');
         return fromJson({});
@@ -140,12 +140,12 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     required T Function(Map<String, dynamic>) fromJson,
     MCubitCache? cacheKey,
   }) async {
-    final json = (await CachingService.getData(cacheKey ?? this.cacheKey)) ?? {};
-
+    final json = (await CachingService.getData(cacheKey ?? this.cacheKey));
+    final Map<String, dynamic> initial = {};
     try {
-      return fromJson(json);
+      return fromJson(json ?? initial);
     } catch (e) {
-      _loggerObject.e('convert json /$nameCache/: $e');
+      _loggerObject.e('convert json /$nameCache/: $e \n $json');
       return fromJson({});
     }
   }
