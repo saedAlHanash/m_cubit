@@ -155,29 +155,33 @@ class CachingService {
     MCubitCache mCubit, {
     required List<dynamic> data,
   }) async {
-    final key = CacheKey(
+    var cacheKey = CacheKey(
       id: getIdFromData(data),
       filter: mCubit.filter,
       version: _version,
       sort: 0,
     );
 
-    if (key.id.isEmpty) return null;
+    if (cacheKey.id.isEmpty) return null;
 
     final box = await getBox(mCubit.nameCache);
 
+    final Map<dynamic, String> mapUpdate = {};
     for (var d in data) {
-      final keys = box.keys.where((e) => jsonDecode(e)['i'] == d.id && (jsonDecode(e)['f'] ?? '') == key.filter);
-
       final item = jsonEncode(d);
 
-      final mapUpdate = Map.fromEntries(keys.map((key) => MapEntry(key, item)));
+      final key =
+          box.keys.firstWhereOrNull((e) => jsonDecode(e)['i'] == d.id && (jsonDecode(e)['f'] ?? '') == cacheKey.filter);
 
-      //if not found the operation is add
-      if (mapUpdate.isEmpty) mapUpdate[key.jsonString] = item;
-
-      await box.putAll(mapUpdate);
+      if (key != null) {
+        mapUpdate[key] = item;
+      } else {
+        cacheKey.id = getIdFromData(d);
+        mapUpdate[cacheKey.jsonString] = item;
+      }
     }
+
+    await box.putAll(mapUpdate);
 
     return await getList(mCubit);
   }
@@ -362,25 +366,25 @@ class CacheKey {
     filter = filter.replaceAll('null', '');
   }
 
-  final String id;
+  String id;
   String filter;
   final num version;
   final int sort;
 
   factory CacheKey.fromJson(Map<String, dynamic> json) {
     return CacheKey(
-      id: json["i"] ?? "",
-      filter: json["f"] ?? "",
-      version: json["v"] ?? 0,
-      sort: json["s"] ?? 0,
+      id: json['i'] ?? '',
+      filter: json['f'] ?? '',
+      version: json['v'] ?? 0,
+      sort: json['s'] ?? 0,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        if (id.isNotEmpty) "i": id,
-        if (filter.isNotEmpty) "f": filter,
-        if (version != 0) "v": version,
-        if (sort != 0) "s": sort,
+        if (id.isNotEmpty) 'i': id,
+        if (filter.isNotEmpty) 'f': filter,
+        if (version != 0) 'v': version,
+        if (sort != 0) 's': sort,
       };
 
   String get jsonString => jsonEncode(toJson());

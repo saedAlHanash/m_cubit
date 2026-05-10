@@ -377,6 +377,7 @@ extension DateUtcHelper on DateTime {
   }
 
   String get formatDateName => DateFormat('dd/$monthName/yyyy').format(this);
+
 }
 
 extension FirstItem<E> on Iterable<E> {
