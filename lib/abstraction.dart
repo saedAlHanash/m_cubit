@@ -72,6 +72,8 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
 
   String get filter => '';
 
+  bool get clearIds => true;
+
   dynamic get mState;
 
   int get timeInterval => time;
@@ -90,14 +92,14 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
 
   Future<void> saveData(
     dynamic data, {
-    bool clearId = true,
+    bool? clearId,
     List<int>? sortKey,
     MCubitCache? cacheKey,
   }) async {
     await CachingService.saveData(
       cacheKey ?? this.cacheKey,
       data: data,
-      clearId: clearId,
+      clearId: clearId ?? clearIds,
       sortKey: sortKey,
     );
   }
@@ -235,10 +237,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
       }
       onError?.call(pair.second);
     } else {
-      await saveData(
-        pair.first,
-        cacheKey: cacheKey,
-      );
+      await saveData(pair.first, cacheKey: cacheKey);
 
       if (onSuccess != null) {
         onSuccess.call(pair.first, CubitStatuses.done);
