@@ -1,10 +1,82 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:logger/logger.dart';
 import 'package:m_cubit/util.dart';
 
 import 'abstraction.dart';
 
+var _loggerObject = Logger(
+  printer: PrettyPrinter(
+    methodCount: 0,
+    // number of method calls to be displayed
+    errorMethodCount: 0,
+    // number of method calls if stacktrace is provided
+    lineLength: 300,
+    // width of the output
+    colors: true,
+    // Colorful log messages
+    printEmojis: false,
+  ),
+);
+
 extension SplitByLength on String {
+  DateTime? get parseArabicDate {
+    var tryPars = DateTime.tryParse(this);
+    if (tryPars != null) return tryPars;
+
+    if (trim().isEmpty) return null;
+
+    try {
+      final List<String> parts = split(' | ');
+      if (parts.length != 2) return null;
+
+      final String datePart = parts[0].trim();
+      final String timePart = parts[1].trim();
+
+      final List<String> timeComponents = timePart.split(' ');
+      if (timeComponents.length != 2) return null;
+
+      final List<String> timeNumbers = timeComponents[0].split(':');
+      if (timeNumbers.length != 2) return null;
+
+      int hour = int.parse(timeNumbers[0]);
+      final int minute = int.parse(timeNumbers[1]);
+      final String amPm = timeComponents[1];
+
+      // Convert 12-hour format to 24-hour format
+      if (amPm == 'م' && hour < 12) {
+        hour += 12;
+      } else if (amPm == 'ص' && hour == 12) {
+        hour = 0;
+      }
+
+      final String hourStr = hour.toString().padLeft(2, '0');
+      final String minuteStr = minute.toString().padLeft(2, '0');
+
+      // Construct standard ISO 8601 string and parse
+      return DateTime.parse('${datePart}T$hourStr:$minuteStr:00');
+    } catch (e) {
+      _loggerObject.e(e);
+      return null; // Return null safely on any parsing exception
+    }
+  }
+
+  FileType get fileType {
+    const imageExt = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'heic'];
+    const videoExt = ['mp4', 'mov', 'avi', 'mkv', 'webm', 'flv'];
+    const audioExt = ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'];
+    const docExt = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf'];
+
+    final ext = fileExtension;
+
+    if (imageExt.contains(ext)) return FileType.image;
+    if (videoExt.contains(ext)) return FileType.video;
+    if (audioExt.contains(ext)) return FileType.audio;
+    if (ext == 'pdf') return FileType.pdf;
+    if (docExt.contains(ext)) return FileType.document;
+    return FileType.other;
+  }
+
   String get fileExtension {
     if (!contains('.')) return '';
     return split('.').last.toLowerCase();
@@ -95,6 +167,21 @@ extension SplitByLength on String {
   bool get isUrl {
     final uri = Uri.tryParse(this);
     return uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
+  }
+
+  String get fixArNumber {
+    final p = this
+        .replaceAll('٠', '0')
+        .replaceAll('١', '1')
+        .replaceAll('٢', '2')
+        .replaceAll('٣', '3')
+        .replaceAll('٤', '4')
+        .replaceAll('٥', '5')
+        .replaceAll('٦', '6')
+        .replaceAll('٧', '7')
+        .replaceAll('٨', '8')
+        .replaceAll('٩', '9');
+    return p;
   }
 
   String get numToEn {
@@ -293,8 +380,6 @@ extension DateUtcHelper on DateTime {
 
   String get formatDateDY => DateFormat('yyyy/MM', 'en').format(this);
 
-  String get formatDateDYMName => '';
-
   String get formatDateD => DateFormat('dd', 'en').format(this);
 
   String get formatDateToRequest => DateFormat('yyyy-MM-dd', 'en').format(this);
@@ -378,10 +463,23 @@ extension DateUtcHelper on DateTime {
 
   String get formatDateName => DateFormat('dd/$monthName/yyyy').format(this);
 
+  String get formatDateApi => DateFormat('yyyy-MM-dd', 'en').format(this);
 }
 
 extension FirstItem<E> on Iterable<E> {
   E? get firstItem => isEmpty ? null : first;
+}
+
+extension ContextHelper on BuildContext {
+  bool get isDark => Theme.of(this).brightness == Brightness.dark;
+}
+
+extension ThemeModeHelper on ThemeMode {
+  bool get isDark {
+    if (this == ThemeMode.dark) return true;
+    if (this == ThemeMode.light) return false;
+    return WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark;
+  }
 }
 
 class FormatDateTime {
@@ -473,3 +571,29 @@ enum FilterOperation {
 }
 
 enum NeedUpdateEnum { no, withLoading, noLoading }
+
+enum FileType {
+  image,
+  video,
+  audio,
+  pdf,
+  document,
+  other;
+
+  IconData get fileTypeIcon {
+    switch (this) {
+      case FileType.image:
+        return Icons.image_rounded;
+      case FileType.video:
+        return Icons.videocam_rounded;
+      case FileType.audio:
+        return Icons.audiotrack_rounded;
+      case FileType.pdf:
+        return Icons.picture_as_pdf_rounded;
+      case FileType.document:
+        return Icons.description_rounded;
+      case FileType.other:
+        return Icons.insert_drive_file_rounded;
+    }
+  }
+}
