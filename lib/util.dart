@@ -279,7 +279,10 @@ extension StringHelper on String? {
     if (text.toLowerCase() == 'id') return true;
 
     if (text.contains('_')) {
-      return text.split('_').lastOrNull?.toLowerCase() == 'id';
+      return text
+          .split('_')
+          .lastOrNull
+          ?.toLowerCase() == 'id';
     }
 
     final camelParts = text.split(RegExp(r'(?=[A-Z])'));
@@ -315,9 +318,7 @@ extension FormatDuration on Duration {
     // if (includeDays && d > 0) buffer.write('${d.toString().padLeft(2, '0')}:');
     if (includeDays || h > 0) buffer.write('${h.toString().padLeft(2, '0')}:');
 
-    buffer
-      ..write('${m.toString().padLeft(2, '0')}:')
-      ..write(s.toString().padLeft(2, '0'));
+    buffer..write('${m.toString().padLeft(2, '0')}:')..write(s.toString().padLeft(2, '0'));
 
     return buffer.toString();
   }
@@ -326,7 +327,11 @@ extension FormatDuration on Duration {
 extension ApiStatusCode on int {
   bool get success => (this >= 200 && this <= 210);
 
-  DateTime get fromMilliDateFixed => DateTime.fromMillisecondsSinceEpoch(this).toUtc().fixTimeZone;
+  DateTime get fromMilliDateFixed =>
+      DateTime
+          .fromMillisecondsSinceEpoch(this)
+          .toUtc()
+          .fixTimeZone;
 
   int get countDiv2 => (this ~/ 2 < this / 2) ? this ~/ 2 + 1 : this ~/ 2;
 }
@@ -438,7 +443,10 @@ extension DateUtcHelper on DateTime {
     return weekNumber - 1;
   }
 
-  DateTime get fixTimeZone => add(DateTime.now().timeZoneOffset);
+  DateTime get fixTimeZone =>
+      add(DateTime
+          .now()
+          .timeZoneOffset);
 
   List<DateTime> getDateTimesBetween({
     required DateTime end,
@@ -464,6 +472,8 @@ extension DateUtcHelper on DateTime {
   String get formatDateName => DateFormat('dd/$monthName/yyyy').format(this);
 
   String get formatDateApi => DateFormat('yyyy-MM-dd', 'en').format(this);
+
+
 }
 
 extension FirstItem<E> on Iterable<E> {
@@ -471,7 +481,10 @@ extension FirstItem<E> on Iterable<E> {
 }
 
 extension ContextHelper on BuildContext {
-  bool get isDark => Theme.of(this).brightness == Brightness.dark;
+  bool get isDark =>
+      Theme
+          .of(this)
+          .brightness == Brightness.dark;
 }
 
 extension ThemeModeHelper on ThemeMode {
