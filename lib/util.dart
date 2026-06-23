@@ -597,3 +597,10 @@ enum FileType {
     }
   }
 }
+
+extension ListH<E> on List  {
+  E getOrNull(int index) {
+    if (index < 0 || index >= length) return null as E;
+    return this[index] as E;
+  }
+}

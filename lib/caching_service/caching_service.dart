@@ -167,18 +167,22 @@ class CachingService {
     final box = await getBox(mCubit.nameCache);
 
     final Map<dynamic, String> mapUpdate = {};
-    for (var d in data) {
-      final item = jsonEncode(d);
+    try {
+      for (var d in data) {
+        final item = jsonEncode(d);
 
-      final key =
-          box.keys.firstWhereOrNull((e) => jsonDecode(e)['i'] == d.id && (jsonDecode(e)['f'] ?? '') == cacheKey.filter);
+        final key = box.keys
+            .firstWhereOrNull((e) => jsonDecode(e)['i'] == d.id && (jsonDecode(e)['f'] ?? '') == cacheKey.filter);
 
-      if (key != null) {
-        mapUpdate[key] = item;
-      } else {
-        cacheKey.id = getIdFromData(d);
-        mapUpdate[cacheKey.jsonString] = item;
+        if (key != null) {
+          mapUpdate[key] = item;
+        } else {
+          cacheKey.id = getIdFromData(d);
+          mapUpdate[cacheKey.jsonString] = item;
+        }
       }
+    } catch (e) {
+      _loggerObject.e('addOrUpdate : $e');
     }
 
     await box.putAll(mapUpdate);
