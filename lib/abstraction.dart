@@ -6,16 +6,12 @@ import 'package:m_cubit/util.dart';
 import 'caching_service/caching_service.dart';
 import 'command.dart';
 
-var _loggerObject = Logger(
+final Logger _logger = Logger(
   printer: PrettyPrinter(
     methodCount: 0,
-    // number of method calls to be displayed
     errorMethodCount: 0,
-    // number of method calls if stacktrace is provided
     lineLength: 300,
-    // width of the output
     colors: true,
-    // Colorful log messages
     printEmojis: false,
   ),
 );
@@ -35,8 +31,7 @@ abstract class AbstractState<T> extends Equatable {
   final dynamic createUpdateRequest;
 
   String get filter {
-    final f = filterRequest?.getKey ?? request?.toString().getKey ?? id?.toString().getKey ?? '';
-    return f;
+    return filterRequest?.getKey ?? request?.toString().getKey ?? id?.toString().getKey ?? '';
   }
 
   const AbstractState({
@@ -51,33 +46,33 @@ abstract class AbstractState<T> extends Equatable {
   });
 
   bool get loading => statuses == CubitStatuses.loading;
-
   bool get noLoading => statuses == CubitStatuses.noLoading;
-
   bool get done => statuses == CubitStatuses.done;
-
   bool get create => cubitCrud == CubitCrud.create;
-
   bool get update => cubitCrud == CubitCrud.update;
-
   bool get delete => cubitCrud == CubitCrud.delete;
-
   bool get isDataEmpty => (statuses != CubitStatuses.loading) && (result is List) && ((result as List).isEmpty);
 }
 
-abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
+abstract class MCubit<S extends AbstractState<dynamic>> extends Cubit<S> {
   MCubit(super.initialState);
 
+  /// The cache box identifier. Override this in your Cubit.
   String get nameCache => '';
 
-  String get filter => '';
+  /// Unique filter string for cache segregation.
+  String get filter => state.filter;
 
+  /// Clear existing cached records on full save if true.
   bool get clearIds => true;
 
-  dynamic get mState;
+  /// Legacy getter for backward compatibility.
+  AbstractState get mState => state;
 
+  /// Time interval for cache expiration in seconds.
   int get timeInterval => time;
 
+  /// Whether to prefix cache name with global super filter.
   bool get withSupperFilet => true;
 
   MCubitCache get cacheKey => MCubitCache(
@@ -87,7 +82,7 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
       );
 
   Future<NeedUpdateEnum> _needGetData() async {
-    return await CachingService.needGetData(this.cacheKey);
+    return await CachingService.needGetData(cacheKey);
   }
 
   Future<void> saveData(
@@ -109,11 +104,11 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
   }
 
   Future<Iterable<dynamic>?> addOrUpdateDate(List<dynamic> data) async {
-    return await CachingService.addOrUpdate(this.cacheKey, data: data);
+    return await CachingService.addOrUpdate(cacheKey, data: data);
   }
 
   Future<Iterable<dynamic>?> deleteDate(List<String> ids) async {
-    return await CachingService.delete(this.cacheKey, ids: ids);
+    return await CachingService.delete(cacheKey, ids: ids);
   }
 
   Future<List<T>> getListCached<T>({
@@ -127,12 +122,12 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
       deleteFunction: deleteFunction,
       reversed: reversed,
     );
-    if (data.isEmpty) return [];
+    if (data.isEmpty) return <T>[];
     return data.map((e) {
       try {
-        return fromJson(e ?? ({} as Map<String, dynamic>));
-      } catch (e) {
-        _loggerObject.e('convert json /$nameCache/: $e');
+        return fromJson(e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e as Map));
+      } catch (err) {
+        _logger.e('convert json /$nameCache/: $err');
         return fromJson({});
       }
     }).toList();
@@ -142,37 +137,33 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
     required T Function(Map<String, dynamic>) fromJson,
     MCubitCache? cacheKey,
   }) async {
-    final json = (await CachingService.getData(cacheKey ?? this.cacheKey));
+    final json = await CachingService.getData(cacheKey ?? this.cacheKey);
     final Map<String, dynamic> initial = {};
     try {
-      return fromJson(json ?? initial);
-    } catch (e) {
-      _loggerObject.e('convert json /$nameCache/: $e \n $json');
-      return fromJson({});
+      if (json == null) return fromJson(initial);
+      return fromJson(json is Map<String, dynamic> ? json : Map<String, dynamic>.from(json as Map));
+    } catch (err) {
+      _logger.e('convert json /$nameCache/: $err \n $json');
+      return fromJson(initial);
     }
   }
 
   Future<MapEntry<bool, dynamic>> checkCashed<T>({
-    required dynamic state,
+    dynamic state,
     required T Function(Map<String, dynamic>) fromJson,
     bool? newData,
     void Function(dynamic data, CubitStatuses emitState)? onSuccess,
   }) async {
+    final currentState = state ?? this.state;
     dynamic data;
 
-    if (state.result is List) {
-      data = await getListCached(fromJson: fromJson);
+    if (currentState.result is List) {
+      data = await getListCached<T>(fromJson: fromJson);
     } else {
-      data = await getDataCached(fromJson: fromJson);
+      data = await getDataCached<T>(fromJson: fromJson);
     }
 
-    // if ((data is! T)) {
-    //   await clearCash();
-    //   _loggerObject.e('Error type : ${T.toString()} / ${data.runtimeType}');
-    //   return checkCashed(state: state, fromJson: fromJson, newData: newData, onSuccess: onSuccess);
-    // }
-
-    final mState = state.copyWith(result: data);
+    final dynamic mState = (currentState as dynamic).copyWith(result: data);
 
     if (newData == true || nameCache.isEmpty) {
       if (onSuccess != null) {
@@ -180,70 +171,71 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
       } else {
         emit(mState.copyWith(statuses: CubitStatuses.loading));
       }
-
       return MapEntry(false, mState);
     }
 
     try {
       final cacheType = await _needGetData();
-
       if (onSuccess != null) {
         onSuccess.call(data, cacheType.getState);
       } else {
         emit(mState.copyWith(statuses: cacheType.getState));
       }
-
       return MapEntry(cacheType == NeedUpdateEnum.no, mState);
     } catch (e) {
-      _loggerObject.e('checkCashed  $nameCache: $e');
-
+      _logger.e('checkCashed $nameCache: $e');
       return MapEntry(false, mState);
     }
   }
 
   Future<void> getDataAbstract<T>({
     required T Function(Map<String, dynamic>) fromJson,
-    required dynamic state,
+    dynamic state,
     required Function getDataApi,
     bool? newData,
-    void Function(dynamic second)? onError,
+    void Function(dynamic error)? onError,
     void Function(dynamic data, CubitStatuses emitState)? onSuccess,
   }) async {
-    final cacheKey = this.cacheKey;
+    final targetCacheKey = cacheKey;
 
-    final checkData = await checkCashed(
-      state: state,
+    final checkData = await checkCashed<T>(
+      state: state ?? this.state,
       fromJson: fromJson,
       newData: newData,
       onSuccess: onSuccess,
     );
 
     if (checkData.key) {
-      _loggerObject.f('$nameCache stopped on cache \n ${cacheKey.filter}');
+      _logger.f('$nameCache stopped on cache \n ${targetCacheKey.filter}');
       return;
     }
 
-    final pair = await getDataApi.call();
+    final dynamic pair = await getDataApi.call();
 
-    if (pair.first == null) {
+    // Supports Pair, CachePair, or objects with first/second properties
+    final dynamic responseData = pair.first;
+    final dynamic responseError = pair.second;
+
+    if (responseData == null) {
       if (isClosed) return;
-
-      final s = checkData.value.copyWith(statuses: CubitStatuses.error, error: pair.second);
-
+      final dynamic s = checkData.value.copyWith(
+        statuses: CubitStatuses.error,
+        error: responseError?.toString() ?? '',
+      );
       emit(s);
 
       if (onError == null) {
         onErrorFun?.call(s);
       }
-      onError?.call(pair.second);
+      onError?.call(responseError);
     } else {
-      await saveData(pair.first, cacheKey: cacheKey);
+      await saveData(responseData, cacheKey: targetCacheKey);
 
       if (onSuccess != null) {
-        onSuccess.call(pair.first, CubitStatuses.done);
+        onSuccess.call(responseData, CubitStatuses.done);
       } else {
         if (isClosed) return;
-        emit(checkData.value.copyWith(statuses: CubitStatuses.done, result: pair.first));
+        emit(checkData.value.copyWith(statuses: CubitStatuses.done, result: responseData));
       }
     }
   }
@@ -251,33 +243,48 @@ abstract class MCubit<AbstractState> extends Cubit<AbstractState> {
   Future<dynamic> getAndSave<T>({
     required Function getDataApi,
   }) async {
-    final pair = await getDataApi.call();
-
+    final dynamic pair = await getDataApi.call();
     if (pair.first == null) return null;
-
     await saveData(pair.first, cacheKey: cacheKey);
-
     return pair.first;
   }
 
   Future<dynamic> getFromCache<T>({
     required T Function(Map<String, dynamic>) fromJson,
-    required dynamic state,
+    dynamic state,
     required void Function(dynamic data) onSuccess,
   }) async {
+    final currentState = state ?? this.state;
     dynamic data;
 
-    if (state.result is List) {
-      data = await getListCached(fromJson: fromJson);
+    if (currentState.result is List) {
+      data = await getListCached<T>(fromJson: fromJson);
     } else {
-      data = await getDataCached(fromJson: fromJson);
+      data = await getDataCached<T>(fromJson: fromJson);
     }
 
     onSuccess.call(data);
-
     return data;
+  }
 
-    // emit(state.copyWith(result: data));
+  /// Modern helper to mutate and update local cache for items
+  Future<List<T>?> addOrUpdateItems<T>({
+    required List<dynamic> items,
+    required T Function(Map<String, dynamic>) fromJson,
+  }) async {
+    final listJson = await addOrUpdateDate(items);
+    if (listJson == null) return null;
+    return listJson.map((e) => fromJson(e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e as Map))).toList();
+  }
+
+  /// Modern helper to delete items by IDs and retrieve updated typed list
+  Future<List<T>?> deleteItems<T>({
+    required List<String> ids,
+    required T Function(Map<String, dynamic>) fromJson,
+  }) async {
+    final listJson = await deleteDate(ids);
+    if (listJson == null) return null;
+    return listJson.map((e) => fromJson(e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e as Map))).toList();
   }
 }
 

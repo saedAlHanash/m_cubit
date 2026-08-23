@@ -1,7 +1,6 @@
 import 'dart:convert';
-
 import 'package:collection/collection.dart';
-import 'package:m_cubit/util.dart';
+import 'util.dart';
 
 class FilterRequest {
   FilterRequest({
@@ -23,11 +22,11 @@ class FilterRequest {
     filters[f.name] = f;
   }
 
-  bool get isSorted => orderBy.isNotEmpty == true;
+  bool get isSorted => orderBy.isNotEmpty;
 
   int get sortedCount => orderBy.length;
 
-  bool get isFiltered => filters.isNotEmpty == true;
+  bool get isFiltered => filters.isNotEmpty;
 
   int get filteredCount => filters.length;
 
@@ -42,8 +41,8 @@ class FilterRequest {
         }).toList(),
         'orderBy': orderBy.map((x) => x.toJson()).toList(),
         'pageableQuery': pageableQuery?.toJson(),
-        'tripId': tripId,
-        'memberId': memberId,
+        if (tripId != null) 'tripId': tripId,
+        if (memberId != null) 'memberId': memberId,
       };
 
   String get getKey {
@@ -142,7 +141,7 @@ class PaginationMeta {
 
   factory PaginationMeta.fromJson(Map<String, dynamic> json) {
     return PaginationMeta(
-      currentPage: json['current_page'] ?? json['currentPage'] ?? 0,
+      currentPage: json['current_page'] ?? json['currentPage'] ?? json['page'] ?? 0,
       lastPage: json['last_page'] ?? json['lastPage'] ?? 0,
       perPage: json['per_page'] ?? json['perPage'] ?? 20,
       total: json['total'] ?? 0,

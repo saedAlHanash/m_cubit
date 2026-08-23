@@ -170,8 +170,7 @@ extension SplitByLength on String {
   }
 
   String get fixArNumber {
-    final p = this
-        .replaceAll('٠', '0')
+    final p = replaceAll('٠', '0')
         .replaceAll('١', '1')
         .replaceAll('٢', '2')
         .replaceAll('٣', '3')
