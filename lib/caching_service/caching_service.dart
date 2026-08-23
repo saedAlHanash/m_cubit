@@ -28,7 +28,7 @@ void Function(dynamic state)? onErrorFun;
 
 class CachingService {
   //region Bucket
-  static Future<void> initialOpenBucket(String bucket) async {
+  static Future<void> _initialOpenBucket(String bucket) async {
     try {
       await getBox(bucket);
     } catch (_) {}
@@ -36,20 +36,20 @@ class CachingService {
 
   static Future<void> addInBucket({
     required String key,
-    required String jsonEncode,
+    required String value,
     String? bucket,
   }) async {
     final box = await getBox(bucket ?? _defaultBoxName);
-    await box.put(key, jsonEncode);
+    await box.put(key, value);
   }
 
   static void addInBucketSync({
     required String key,
-    required String jsonEncode,
+    required String value,
     String? bucket,
   }) {
     final box = getBoxSync(bucket ?? _defaultBoxName);
-    box.put(key, jsonEncode);
+    box.put(key, value);
   }
 
   static Future<String?> getFromBucket({
@@ -60,8 +60,8 @@ class CachingService {
     return box.get(key);
   }
 
-  static Future<List<String>> getAllFromBucket({String? bucket}) async {
-    final box = await getBox(bucket ?? _defaultBoxName);
+  static Future<List<String>> getAllFromBucket({required String bucket}) async {
+    final box = await getBox(bucket);
     return box.values.toList();
   }
 
@@ -69,17 +69,18 @@ class CachingService {
     String? bucket,
     required String key,
   }) {
-    final box = Hive.box<String>(bucket ?? _defaultBoxName);
+    final box = getBoxSync(bucket ?? _defaultBoxName);
     if (!box.isOpen) return null;
     return box.get(key);
   }
 
   static Future<void> clearBucket({required String bucket}) async {
-    final box = getBoxSync(bucket);
+    final box = await getBox(bucket);
     final keys = box.keys;
     await box.deleteAll(keys);
     await box.clear();
   }
+
   //endregion
 
   static Future<void> initial({
@@ -96,10 +97,10 @@ class CachingService {
       await Hive.initFlutter();
     }
 
-    await initialOpenBucket(_defaultBoxName);
+    await _initialOpenBucket(_defaultBoxName);
 
     for (final boxName in initialOpened ?? <String>[]) {
-      await initialOpenBucket(boxName);
+      await _initialOpenBucket(boxName);
     }
 
     _version = version ?? 1;
