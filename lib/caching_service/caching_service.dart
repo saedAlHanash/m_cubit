@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:collection/collection.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:logger/logger.dart';
 
-import '../abstraction.dart';
 import '../util.dart';
 
 final Logger _logger = Logger(
@@ -118,143 +116,206 @@ class CachingService {
 
   static void setSupperFilter(String supperFilter) => mSupperFilter = supperFilter;
 
-  static Future<void> _updateLatestUpdateBox(MCubitCache mCubit) async {
+  static String formatKey({
+    required String filter,
+    required String id,
+    int sort = 0,
+  }) {
+    final cleanFilter = filter.replaceAll(':', '_');
+    return '$cleanFilter:$sort:$id';
+  }
+
+  static ({String filter, int sort, String id}) parseKey(String key) {
+    final parts = key.split(':');
+    if (parts.length >= 3) {
+      return (
+        filter: parts[0],
+        sort: int.tryParse(parts[1]) ?? 0,
+        id: parts.sublist(2).join(':'),
+      );
+    }
+    // Fallback for legacy JSON-encoded keys if any
+    try {
+      final decoded = jsonDecode(key);
+      return (
+        filter: decoded['f']?.toString() ?? '',
+        sort: decoded['s'] is int ? decoded['s'] as int : 0,
+        id: decoded['i']?.toString() ?? '',
+      );
+    } catch (_) {
+      return (filter: '', sort: 0, id: key);
+    }
+  }
+
+  static Future<void> _updateLatestUpdate({
+    required String boxName,
+    required String filter,
+  }) async {
     final updateBox = await getBox(latestUpdateBox);
     await updateBox.put(
-      '${mCubit.fixedName}${mCubit.filter}',
+      '$boxName$filter',
       DateTime.now().toIso8601String(),
     );
   }
 
-  static Future<void> saveData(
-    MCubitCache mCubit, {
+  static Future<void> saveData({
+    required String boxName,
+    required String filter,
     required dynamic data,
     bool clearId = true,
     List<int>? sortKey,
   }) async {
-    await _updateLatestUpdateBox(mCubit);
+    await _updateLatestUpdate(boxName: boxName, filter: filter);
 
-    final box = await getBox(mCubit.nameCache);
+    final box = await getBox(boxName);
     final id = _getIdParam(data);
     final haveId = id.isNotEmpty;
 
-    final key = CacheKey(
-      id: id,
-      sort: 0,
-      filter: mCubit.filter,
-      version: _version,
-    );
-
     if (data is Iterable) {
-      if (clearId) await clearKeysId(box: box, key: key);
+      if (clearId) {
+        await clearFilterKeys(box: box, filter: filter);
+      }
 
-      final map = <dynamic, String>{};
-
-      data.forEachIndexed(
-        (i, e) {
-          final itemId = haveId ? _getIdParam(e) : '';
-          final keyString = key.copyWith(id: itemId, sort: sortKey?[i] ?? i).jsonString;
-          map[keyString] = jsonEncode(e);
-        },
-      );
+      final map = <String, String>{};
+      var index = 0;
+      for (final item in data) {
+        final itemId = haveId ? _getIdParam(item) : '';
+        final sortOrder = (sortKey != null && sortKey.length > index) ? sortKey[index] : index;
+        final keyString = formatKey(filter: filter, id: itemId, sort: sortOrder);
+        map[keyString] = jsonEncode(item);
+        index++;
+      }
 
       await box.putAll(map);
       return;
     }
 
-    await box.put(key.jsonString, jsonEncode(data));
+    final keyString = formatKey(filter: filter, id: id, sort: 0);
+    await box.put(keyString, jsonEncode(data));
   }
 
-  static Future<Iterable<dynamic>?> addOrUpdate(
-    MCubitCache mCubit, {
+  static Future<Iterable<dynamic>?> addOrUpdate({
+    required String boxName,
+    required String filter,
     required List<dynamic> data,
   }) async {
-    final cacheKey = CacheKey(
-      id: getIdFromData(data),
-      filter: mCubit.filter,
-      version: _version,
-      sort: 0,
-    );
-
-    if (cacheKey.id.isEmpty) return null;
-
-    final box = await getBox(mCubit.nameCache);
-    final Map<dynamic, String> mapUpdate = {};
+    final box = await getBox(boxName);
+    final Map<String, String> mapUpdate = {};
 
     try {
       for (final d in data) {
-        final item = jsonEncode(d);
+        final itemJson = jsonEncode(d);
         final itemId = _getIdParam(d);
+        if (itemId.isEmpty) continue;
 
-        final key = box.keys.firstWhereOrNull((e) {
-          final decoded = jsonDecode(e);
-          return decoded['i'] == itemId && (decoded['f'] ?? '') == cacheKey.filter;
-        });
+        final existingKey = box.keys.cast<String?>().firstWhere(
+          (k) {
+            if (k == null) return false;
+            final parsed = parseKey(k);
+            return parsed.id == itemId && parsed.filter == filter;
+          },
+          orElse: () => null,
+        );
 
-        if (key != null) {
-          mapUpdate[key] = item;
+        if (existingKey != null) {
+          mapUpdate[existingKey] = itemJson;
         } else {
-          cacheKey.id = itemId;
-          mapUpdate[cacheKey.jsonString] = item;
+          final newKey = formatKey(filter: filter, id: itemId, sort: 0);
+          mapUpdate[newKey] = itemJson;
         }
       }
     } catch (e) {
-      _logger.e('addOrUpdate: $e');
+      _logger.e('addOrUpdate error: $e');
     }
 
-    await box.putAll(mapUpdate);
-    return await getList(mCubit);
+    if (mapUpdate.isNotEmpty) {
+      await box.putAll(mapUpdate);
+    }
+
+    return await getList(boxName: boxName, filter: filter);
   }
 
-  static Future<Iterable<dynamic>?> delete(
-    MCubitCache mCubit, {
+  static Future<Iterable<dynamic>?> delete({
+    required String boxName,
+    required String filter,
     required List<String> ids,
   }) async {
-    final box = await getBox(mCubit.nameCache);
+    final box = await getBox(boxName);
+    final keysToDelete = <String>[];
 
-    for (final e in box.keys) {
-      try {
-        final json = jsonDecode(e);
-        if (ids.contains(json['i'])) {
-          await box.delete(e);
-        }
-      } catch (_) {}
+    for (final k in box.keys) {
+      if (k is! String) continue;
+      final parsed = parseKey(k);
+      if (ids.contains(parsed.id)) {
+        keysToDelete.add(k);
+      }
     }
 
-    return await getList(mCubit);
+    if (keysToDelete.isNotEmpty) {
+      await box.deleteAll(keysToDelete);
+    }
+
+    return await getList(boxName: boxName, filter: filter);
   }
 
-  static Future<void> clearKeysId({
+  static Future<void> clearFilterKeys({
     required Box<String> box,
-    required CacheKey key,
+    required String filter,
   }) async {
-    final keys = key.filter.isEmpty
-        ? box.keys
-        : box.keys.where((e) {
-            try {
-              return (jsonDecode(e)['f'] ?? '') == key.filter;
-            } catch (_) {
-              return false;
-            }
-          });
+    final keysToDelete = box.keys.where((k) {
+      if (k is! String) return false;
+      if (filter.isEmpty) return true;
+      final parsed = parseKey(k);
+      return parsed.filter == filter;
+    }).toList();
 
-    await box.deleteAll(keys);
+    await box.deleteAll(keysToDelete);
   }
 
-  static Future<Iterable<dynamic>> getList(
-    MCubitCache mCubit, {
+  static Future<Iterable<dynamic>> getList({
+    required String boxName,
+    required String filter,
     bool Function(Map<String, dynamic> json)? deleteFunction,
     bool? reversed,
   }) async {
-    final box = await getBox(mCubit.nameCache);
-    final listKeys = await _findKey(mCubit, reversed: reversed, deleteFunction: deleteFunction);
-    return listKeys.map((i) => jsonDecode(box.getAt(i) ?? '{}'));
+    final box = await getBox(boxName);
+    final sortedIndices = await _findKeyIndices(
+      boxName: boxName,
+      filter: filter,
+      reversed: reversed,
+      deleteFunction: deleteFunction,
+    );
+
+    return sortedIndices.map((i) {
+      final val = box.getAt(i);
+      if (val == null) return <String, dynamic>{};
+      try {
+        return jsonDecode(val);
+      } catch (_) {
+        return <String, dynamic>{};
+      }
+    });
   }
 
-  static Future<dynamic> getData(MCubitCache mCubit) async {
-    final box = await getBox(mCubit.nameCache);
-    final listKeys = await _findKey(mCubit, firstFound: true);
-    return listKeys.map((i) => jsonDecode(box.getAt(i) ?? '{}')).firstOrNull;
+  static Future<dynamic> getData({
+    required String boxName,
+    required String filter,
+  }) async {
+    final box = await getBox(boxName);
+    final sortedIndices = await _findKeyIndices(
+      boxName: boxName,
+      filter: filter,
+      firstFound: true,
+    );
+
+    if (sortedIndices.isEmpty) return null;
+    final val = box.getAt(sortedIndices.first);
+    if (val == null) return null;
+    try {
+      return jsonDecode(val);
+    } catch (_) {
+      return null;
+    }
   }
 
   static Future<Box<String>> getBox(String name) async {
@@ -265,27 +326,27 @@ class CachingService {
     return Hive.box<String>(name);
   }
 
-  static Future<List<int>> _findKey(
-    MCubitCache mCubit, {
+  static Future<List<int>> _findKeyIndices({
+    required String boxName,
+    required String filter,
     bool firstFound = false,
     bool? reversed,
     bool Function(Map<String, dynamic> json)? deleteFunction,
   }) async {
-    final box = await getBox(mCubit.nameCache);
+    final box = await getBox(boxName);
     final listKeys = box.keys.toList();
-    final myMap = <int, int>{};
+    final indexSortMap = <int, int>{};
 
     for (var i = 0; i < listKeys.length; i++) {
-      try {
-        final keyCache = CacheKey.fromJson(jsonDecode(listKeys[i]));
+      final rawKey = listKeys[i];
+      if (rawKey is! String) continue;
 
-        if (keyCache.version != _version) {
-          await clearCash(mCubit.nameCache);
-          break;
-        }
+      try {
+        final parsed = parseKey(rawKey);
 
         if (deleteFunction != null) {
-          if (deleteFunction.call(jsonDecode(box.getAt(i) ?? '{}'))) {
+          final content = box.getAt(i);
+          if (content != null && deleteFunction(jsonDecode(content))) {
             listKeys.removeAt(i);
             await box.deleteAt(i);
             i -= 1;
@@ -293,21 +354,18 @@ class CachingService {
           }
         }
 
-        if (keyCache.filter == mCubit.filter) {
-          myMap[i] = keyCache.sort;
+        if (parsed.filter == filter) {
+          indexSortMap[i] = parsed.sort;
           if (firstFound) break;
         }
       } catch (e) {
-        _logger.e('_findKey: $e');
-        listKeys.removeAt(i);
-        await box.deleteAt(i);
-        i -= 1;
+        _logger.e('_findKeyIndices error: $e');
       }
     }
 
-    if (myMap.isEmpty) return [];
+    if (indexSortMap.isEmpty) return [];
 
-    final sortedEntries = myMap.entries.toList()
+    final sortedEntries = indexSortMap.entries.toList()
       ..sort((e1, e2) {
         if (reversed == true) {
           return e2.value.compareTo(e1.value);
@@ -319,20 +377,31 @@ class CachingService {
     return sortedEntries.map((e) => e.key).toList();
   }
 
-  static Future<DateTime?> _latestDate(MCubitCache mCubit) async {
+  static Future<DateTime?> latestDate({
+    required String boxName,
+    required String filter,
+  }) async {
     final box = await getBox(latestUpdateBox);
-    return DateTime.tryParse(box.get('${mCubit.fixedName}${mCubit.filter}') ?? '');
+    return DateTime.tryParse(box.get('$boxName$filter') ?? '');
   }
 
-  static Future<NeedUpdateEnum> needGetData(MCubitCache mCubit) async {
-    final latest = await _latestDate(mCubit);
+  static Future<NeedUpdateEnum> needGetData({
+    required String boxName,
+    required String filter,
+    required int timeInterval,
+  }) async {
+    final latest = await latestDate(boxName: boxName, filter: filter);
     if (latest == null) return NeedUpdateEnum.withLoading;
 
-    final keyFounded = await _findKey(mCubit, firstFound: true);
+    final keyFounded = await _findKeyIndices(
+      boxName: boxName,
+      filter: filter,
+      firstFound: true,
+    );
     if (keyFounded.isEmpty) return NeedUpdateEnum.withLoading;
 
-    final d = DateTime.now().difference(latest).inSeconds.abs();
-    if (d > mCubit.timeInterval) return NeedUpdateEnum.noLoading;
+    final diffInSeconds = DateTime.now().difference(latest).inSeconds.abs();
+    if (diffInSeconds > timeInterval) return NeedUpdateEnum.noLoading;
 
     return NeedUpdateEnum.no;
   }
@@ -363,53 +432,5 @@ class CachingService {
     final box = await getBox(name);
     await box.deleteAll(box.keys);
     await box.flush();
-  }
-}
-
-class CacheKey {
-  CacheKey({
-    required this.id,
-    required this.filter,
-    required this.version,
-    required this.sort,
-  }) {
-    filter = filter.replaceAll('null', '');
-  }
-
-  String id;
-  String filter;
-  final num version;
-  final int sort;
-
-  factory CacheKey.fromJson(Map<String, dynamic> json) {
-    return CacheKey(
-      id: json['i']?.toString() ?? '',
-      filter: json['f']?.toString() ?? '',
-      version: json['v'] ?? 0,
-      sort: json['s'] ?? 0,
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-        if (id.isNotEmpty) 'i': id,
-        if (filter.isNotEmpty) 'f': filter,
-        if (version != 0) 'v': version,
-        if (sort != 0) 's': sort,
-      };
-
-  String get jsonString => jsonEncode(toJson());
-
-  CacheKey copyWith({
-    String? id,
-    String? filter,
-    num? version,
-    int? sort,
-  }) {
-    return CacheKey(
-      id: id ?? this.id,
-      filter: filter ?? this.filter,
-      version: version ?? this.version,
-      sort: sort ?? this.sort,
-    );
   }
 }

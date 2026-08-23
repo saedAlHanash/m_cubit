@@ -75,50 +75,73 @@ abstract class MCubit<S extends AbstractState<dynamic>> extends Cubit<S> {
   /// Whether to prefix cache name with global super filter.
   bool get withSupperFilet => true;
 
-  MCubitCache get cacheKey => MCubitCache(
-        nameCache: withSupperFilet ? '${mSupperFilter ?? ''}-$nameCache' : nameCache,
-        filter: filter,
-        timeInterval: timeInterval,
-      );
+  /// Computed actual cache box name taking super filter into account.
+  String get resolvedCacheBox => withSupperFilet && mSupperFilter != null && mSupperFilter!.isNotEmpty
+      ? '$mSupperFilter-$nameCache'
+      : nameCache;
 
   Future<NeedUpdateEnum> _needGetData() async {
-    return await CachingService.needGetData(cacheKey);
+    return await CachingService.needGetData(
+      boxName: resolvedCacheBox,
+      filter: filter,
+      timeInterval: timeInterval,
+    );
   }
 
   Future<void> saveData(
     dynamic data, {
     bool? clearId,
     List<int>? sortKey,
-    MCubitCache? cacheKey,
+    String? customBoxName,
+    String? customFilter,
   }) async {
     await CachingService.saveData(
-      cacheKey ?? this.cacheKey,
+      boxName: customBoxName ?? resolvedCacheBox,
+      filter: customFilter ?? filter,
       data: data,
       clearId: clearId ?? clearIds,
       sortKey: sortKey,
     );
   }
 
-  Future<void> clearCash() async {
-    await CachingService.clearCash(nameCache);
+  Future<void> clearCash([String? customBoxName]) async {
+    await CachingService.clearCash(customBoxName ?? resolvedCacheBox);
   }
 
-  Future<Iterable<dynamic>?> addOrUpdateDate(List<dynamic> data) async {
-    return await CachingService.addOrUpdate(cacheKey, data: data);
+  Future<Iterable<dynamic>?> addOrUpdateDate(
+    List<dynamic> data, {
+    String? customBoxName,
+    String? customFilter,
+  }) async {
+    return await CachingService.addOrUpdate(
+      boxName: customBoxName ?? resolvedCacheBox,
+      filter: customFilter ?? filter,
+      data: data,
+    );
   }
 
-  Future<Iterable<dynamic>?> deleteDate(List<String> ids) async {
-    return await CachingService.delete(cacheKey, ids: ids);
+  Future<Iterable<dynamic>?> deleteDate(
+    List<String> ids, {
+    String? customBoxName,
+    String? customFilter,
+  }) async {
+    return await CachingService.delete(
+      boxName: customBoxName ?? resolvedCacheBox,
+      filter: customFilter ?? filter,
+      ids: ids,
+    );
   }
 
   Future<List<T>> getListCached<T>({
     required T Function(Map<String, dynamic>) fromJson,
     bool? reversed,
     bool Function(Map<String, dynamic> json)? deleteFunction,
-    MCubitCache? cacheKey,
+    String? customBoxName,
+    String? customFilter,
   }) async {
     final data = await CachingService.getList(
-      cacheKey ?? this.cacheKey,
+      boxName: customBoxName ?? resolvedCacheBox,
+      filter: customFilter ?? filter,
       deleteFunction: deleteFunction,
       reversed: reversed,
     );
@@ -135,9 +158,13 @@ abstract class MCubit<S extends AbstractState<dynamic>> extends Cubit<S> {
 
   Future<T> getDataCached<T>({
     required T Function(Map<String, dynamic>) fromJson,
-    MCubitCache? cacheKey,
+    String? customBoxName,
+    String? customFilter,
   }) async {
-    final json = await CachingService.getData(cacheKey ?? this.cacheKey);
+    final json = await CachingService.getData(
+      boxName: customBoxName ?? resolvedCacheBox,
+      filter: customFilter ?? filter,
+    );
     final Map<String, dynamic> initial = {};
     try {
       if (json == null) return fromJson(initial);
@@ -196,7 +223,8 @@ abstract class MCubit<S extends AbstractState<dynamic>> extends Cubit<S> {
     void Function(dynamic error)? onError,
     void Function(dynamic data, CubitStatuses emitState)? onSuccess,
   }) async {
-    final targetCacheKey = cacheKey;
+    final currentFilter = filter;
+    final currentBox = resolvedCacheBox;
 
     final checkData = await checkCashed<T>(
       state: state ?? this.state,
@@ -206,13 +234,11 @@ abstract class MCubit<S extends AbstractState<dynamic>> extends Cubit<S> {
     );
 
     if (checkData.key) {
-      _logger.f('$nameCache stopped on cache \n ${targetCacheKey.filter}');
+      _logger.f('$nameCache stopped on cache \n $currentFilter');
       return;
     }
 
     final dynamic pair = await getDataApi.call();
-
-    // Supports Pair, CachePair, or objects with first/second properties
     final dynamic responseData = pair.first;
     final dynamic responseError = pair.second;
 
@@ -229,7 +255,11 @@ abstract class MCubit<S extends AbstractState<dynamic>> extends Cubit<S> {
       }
       onError?.call(responseError);
     } else {
-      await saveData(responseData, cacheKey: targetCacheKey);
+      await saveData(
+        responseData,
+        customBoxName: currentBox,
+        customFilter: currentFilter,
+      );
 
       if (onSuccess != null) {
         onSuccess.call(responseData, CubitStatuses.done);
@@ -245,7 +275,7 @@ abstract class MCubit<S extends AbstractState<dynamic>> extends Cubit<S> {
   }) async {
     final dynamic pair = await getDataApi.call();
     if (pair.first == null) return null;
-    await saveData(pair.first, cacheKey: cacheKey);
+    await saveData(pair.first);
     return pair.first;
   }
 
@@ -285,21 +315,5 @@ abstract class MCubit<S extends AbstractState<dynamic>> extends Cubit<S> {
     final listJson = await deleteDate(ids);
     if (listJson == null) return null;
     return listJson.map((e) => fromJson(e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e as Map))).toList();
-  }
-}
-
-class MCubitCache {
-  final String nameCache;
-  final String filter;
-  int timeInterval;
-
-  String get fixedName => nameCache.replaceAll(mSupperFilter ?? '', '');
-
-  MCubitCache({
-    required this.nameCache,
-    this.filter = '',
-    this.timeInterval = -1,
-  }) {
-    if (timeInterval < 0) timeInterval = time;
   }
 }
