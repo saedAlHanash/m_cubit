@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M_Cubit Sequence Diagram (EN)</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <h1>M_Cubit Data Flow</h1>
+    <pre class="mermaid">
+        sequenceDiagram
+            participant UI as User Interface
+            participant Cubit as MCubit Logic
+            participant CachingService as Cache
+            participant API as Remote API
+
+            UI->>Cubit: 1. User action triggers fetchData()
+            note over UI: The user presses a button or loads a screen.
+
+            Cubit->>UI: 2. emit(State(status: loading))
+            note over UI: Shows a loading spinner, potentially with stale data.
+
+            Cubit->>CachingService: 3. checkCashed() / needGetData()
+            note over CachingService: Checks if valid cache exists and is not expired.
+
+            alt Data is cached and valid
+                CachingService-->>Cubit: 4a. Returns valid cached data
+                Cubit->>UI: 5a. emit(State(status: done, data: cachedData))
+                note over UI: Displays data directly from the cache. The flow ends here.
+            else Data is stale or not cached
+                CachingService-->>Cubit: 4b. Notifies Cubit that cache needs an update.
+                Cubit->>API: 5b. Request data from the remote server.
+                API-->>Cubit: 6. Returns API Response (Success or Failure).
+
+                alt API call is successful
+                    Cubit->>CachingService: 7a. saveData(apiData)
+                    note over CachingService: New data is stored in the local cache.
+
+                    Cubit->>UI: 8a. emit(State(status: done, data: apiData))
+                    note over UI: Hides loading spinner and displays fresh data.
+                else API call fails
+                    Cubit->>UI: 7b. emit(State(status: error, error: message))
+                    note over UI: Shows an error message to the user.
+                end
+            end
+    </pre>
+    <script>
+        mermaid.initialize({ startOnLoad: true });
+    </script>
+</body>
+</html>

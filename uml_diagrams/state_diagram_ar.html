@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M_Cubit مخطط الحالة (AR)</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            direction: rtl;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <h1>CubitStatuses دورة حياة حالات</h1>
+    <pre class="mermaid">
+        stateDiagram-v2
+            direction LR
+            [*] --> تهيئة: الحالة الأولية
+
+            تهيئة --> تحميل: استدعاء ()fetchData
+            تهيئة --> "بدون تحميل" as noLoading: استدعاء ()fetchData (مع وجود كاش)
+
+            تحميل --> مكتمل: نجاح استدعاء الـ API
+            تحميل --> خطأ: فشل استدعاء الـ API
+
+            noLoading --> مكتمل: نجاح الجلب في الخلفية
+            noLoading --> خطأ: فشل الجلب في الخلفية
+
+            مكتمل --> تحميل: استدعاء ()refreshData
+            خطأ --> تحميل: استدعاء ()retry
+
+            note right of تهيئة
+                .يبدأ الـ Cubit في حالة 'التهيئة'
+            end note
+
+            note right of تحميل
+                'حالة 'التحميل' تشير إلى أن هناك جلب بيانات إلزامي قيد التنفيذ
+                'حالة 'بدون تحميل' مشابهة ولكنها تحدث عند عرض بيانات قديمة
+                .من الكاش بينما يتم جلب البيانات في الخلفية
+            end note
+    </pre>
+    <script>
+        mermaid.initialize({ startOnLoad: true });
+    </script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M_Cubit مخطط الفئات (AR)</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            direction: rtl;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <h1>M_Cubit مخطط الفئات</h1>
+    <pre class="mermaid">
+        classDiagram
+            direction LR
+
+            class Cubit~S~ {
+                <<flutter_bloc>>
+            }
+
+            class Equatable {
+                <<equatable>>
+            }
+
+            class MCubit~S~ {
+                <<مجرد>>
+                +nameCache: String
+                +filter: String
+                +getDataAbstract(): void
+                +saveData(): void
+                +clearCash(): void
+                +checkCashed(): Future
+            }
+
+            class AbstractState~T~ {
+                <<مجرد>>
+                +statuses: CubitStatuses
+                +cubitCrud: CubitCrud
+                +error: String
+                +result: T
+            }
+
+            class `خدمة التخزين المؤقت` as CachingService {
+                <<خدمة>>
+                +needGetData(): Future
+                +saveData(): void
+                +getList(): Future
+                +getData(): Future
+            }
+
+            class MCubitCache {
+                +nameCache: String
+                +filter: String
+                +timeInterval: int
+            }
+
+            class `حالات Cubit` as CubitStatuses {
+                <<تعداد>>
+                تهيئة
+                تحميل
+                بدون تحميل
+                مكتمل
+                خطأ
+            }
+
+            class `عمليات Cubit` as CubitCrud {
+                <<تعداد>>
+                جلب
+                إنشاء
+                تحديث
+                حذف
+            }
+
+            Cubit <|-- MCubit
+            Equatable <|-- AbstractState
+            MCubit "1" o-- "1" MCubitCache : لديه
+            MCubit ..> CachingService : يعتمد على
+            MCubit --|> AbstractState : يدير
+            AbstractState "1" *-- "1" CubitStatuses : يحتوي على
+            AbstractState "1" *-- "1" CubitCrud : يحتوي على
+    </pre>
+    <script>
+        mermaid.initialize({ startOnLoad: true });
+    </script>
+</body>
+</html>
