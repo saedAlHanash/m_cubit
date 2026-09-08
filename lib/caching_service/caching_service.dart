@@ -42,14 +42,23 @@ class CachingService {
     } catch (_) {}
   }
 
-  static Future<void> addInBucket({required String key, required String jsonEncode}) async {
-    final box = await getBox(_dfName);
+  static Future<void> addInBucket({required String key, required String jsonEncode, String? bucket}) async {
+    final box = await getBox(bucket ?? _dfName);
     await box.put(key, jsonEncode);
+  }
+
+  static void addInBucketSync({required String key, required String jsonEncode, String? bucket}) {
+    final box = getBoxSync(bucket ?? _dfName);
+    box.put(key, jsonEncode);
   }
 
   static Future<String?> getFromBucket({String? bucket, required String key}) async {
     final box = await getBox(bucket ?? _dfName);
     return box.get(key);
+  }
+  static Future<List<String>> getAllFromBucket({String? bucket}) async {
+    final box = await getBox(bucket ?? _dfName);
+    return box.values.toList();
   }
 
   static String? getFromBucketSync({String? bucket, required String key}) {
@@ -58,11 +67,12 @@ class CachingService {
     return box.get(key);
   }
 
-  // static Map<String, dynamic> getFromBucketJsonSync({required String key}) {
-  //   final box = Hive.box<String>(_dfName);
-  //   if (!box.isOpen) return {};
-  //   return jsonDecode(box.get(key) ?? '{}') ?? <String, dynamic>{};
-  // }
+  static Future<void> clearBucket({required String bucket}) async {
+    final box = getBoxSync(bucket);
+    final keys = box.keys;
+    await box.deleteAll(keys);
+    await box.clear();
+  }
 
   //endregion
 
@@ -167,18 +177,22 @@ class CachingService {
     final box = await getBox(mCubit.nameCache);
 
     final Map<dynamic, String> mapUpdate = {};
-    for (var d in data) {
-      final item = jsonEncode(d);
+    try {
+      for (var d in data) {
+        final item = jsonEncode(d);
 
-      final key =
-          box.keys.firstWhereOrNull((e) => jsonDecode(e)['i'] == d.id && (jsonDecode(e)['f'] ?? '') == cacheKey.filter);
+        final key = box.keys
+            .firstWhereOrNull((e) => jsonDecode(e)['i'] == d.id && (jsonDecode(e)['f'] ?? '') == cacheKey.filter);
 
-      if (key != null) {
-        mapUpdate[key] = item;
-      } else {
-        cacheKey.id = getIdFromData(d);
-        mapUpdate[cacheKey.jsonString] = item;
+        if (key != null) {
+          mapUpdate[key] = item;
+        } else {
+          cacheKey.id = getIdFromData(d);
+          mapUpdate[cacheKey.jsonString] = item;
+        }
       }
+    } catch (e) {
+      _loggerObject.e('addOrUpdate : $e');
     }
 
     await box.putAll(mapUpdate);
@@ -233,6 +247,10 @@ class CachingService {
 
   static Future<Box<String>> getBox(String name) async {
     return Hive.isBoxOpen(name) ? Hive.box<String>(name) : await Hive.openBox<String>(name);
+  }
+
+  static Box<String> getBoxSync(String name) {
+    return Hive.box<String>(name);
   }
 
   static Future<List<int>> _findKey(
