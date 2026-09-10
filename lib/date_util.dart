@@ -1,5 +1,30 @@
 import 'package:intl/intl.dart';
 
+const _dayPatterns = {
+  0: ['أحد', 'احد', 'sun', 'sunday'],
+  1: ['اثنين', 'إثنين', 'mon', 'monday', 'monady', 'mondy'],
+  2: ['ثلاثاء', 'ثلاثا', 'ثلاثة', 'tue', 'tuesday', 'tuseday', 'tusday'],
+  3: ['أربعاء', 'اربعاء', 'اربعا', 'wed', 'wednesday', 'wensday', 'wednsday'],
+  4: ['خميس', 'thu', 'thursday', 'thrusday', 'thursady'],
+  5: ['جمعة', 'جمعه', 'fri', 'friday', 'fridy'],
+  6: ['سبت', 'sat', 'saturday', 'satday', 'saturady'],
+};
+
+const months = [
+  'كانون الثاني',
+  'شباط',
+  'آذار',
+  'نيسان',
+  'أيار',
+  'حزيران',
+  'تموز',
+  'آب',
+  'أيلول',
+  'تشرين الأول',
+  'تشرين الثاني',
+  'كانون الأول',
+];
+
 extension FormatDuration on Duration {
   String get format {
     var includeDays = false;
@@ -23,19 +48,9 @@ extension FormatDuration on Duration {
 
 extension DateString on String {
   int get dayIndex {
-    const dayPatterns = {
-      0: ['أحد', 'احد', 'sun', 'sunday'],
-      1: ['اثنين', 'إثنين', 'mon', 'monday', 'monady', 'mondy'],
-      2: ['ثلاثاء', 'ثلاثا', 'ثلاثة', 'tue', 'tuesday', 'tuseday', 'tusday'],
-      3: ['أربعاء', 'اربعاء', 'اربعا', 'wed', 'wednesday', 'wensday', 'wednsday'],
-      4: ['خميس', 'thu', 'thursday', 'thrusday', 'thursady'],
-      5: ['جمعة', 'جمعه', 'fri', 'friday', 'fridy'],
-      6: ['سبت', 'sat', 'saturday', 'satday', 'saturady'],
-    };
-
     final input = trim().toLowerCase();
     try {
-      return dayPatterns.entries.firstWhere((e) => e.value.any((pattern) => input.contains(pattern))).key;
+      return _dayPatterns.entries.firstWhere((e) => e.value.any((pattern) => input.contains(pattern))).key;
     } catch (_) {
       return 0;
     }
@@ -88,21 +103,8 @@ extension DateUtcHelper on DateTime {
   String get dayName => DateFormat('EEEE').format(this);
 
   String get monthName => DateFormat('MMMM').format(this);
+
   String get monthNameAr {
-    const months = [
-      'كانون الثاني',
-      'شباط',
-      'آذار',
-      'نيسان',
-      'أيار',
-      'حزيران',
-      'تموز',
-      'آب',
-      'أيلول',
-      'تشرين الأول',
-      'تشرين الثاني',
-      'كانون الأول',
-    ];
     return months[month - 1];
   }
 
@@ -181,8 +183,6 @@ extension DateUtcHelper on DateTime {
 
   /// تحويل اليوم الحالي لنظام يبدأ من الأحد (0 = الأحد .. 6 = السبت)
   int get arabicWeekdayIndex => weekday % 7;
-
-
 }
 
 class FormatDateTime {
