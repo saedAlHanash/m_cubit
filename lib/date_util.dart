@@ -88,6 +88,23 @@ extension DateUtcHelper on DateTime {
   String get dayName => DateFormat('EEEE').format(this);
 
   String get monthName => DateFormat('MMMM').format(this);
+  String get monthNameAr {
+    const months = [
+      'كانون الثاني',
+      'شباط',
+      'آذار',
+      'نيسان',
+      'أيار',
+      'حزيران',
+      'تموز',
+      'آب',
+      'أيلول',
+      'تشرين الأول',
+      'تشرين الثاني',
+      'كانون الأول',
+    ];
+    return months[month - 1];
+  }
 
   String get formatDateTime => '$formatDate - $formatTime';
 

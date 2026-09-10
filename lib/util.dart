@@ -279,10 +279,7 @@ extension StringHelper on String? {
     if (text.toLowerCase() == 'id') return true;
 
     if (text.contains('_')) {
-      return text
-          .split('_')
-          .lastOrNull
-          ?.toLowerCase() == 'id';
+      return text.split('_').lastOrNull?.toLowerCase() == 'id';
     }
 
     final camelParts = text.split(RegExp(r'(?=[A-Z])'));
@@ -308,11 +305,7 @@ extension HelperJson on Map<String, dynamic> {
 extension ApiStatusCode on int {
   bool get success => (this >= 200 && this <= 210);
 
-  DateTime get fromMilliDateFixed =>
-      DateTime
-          .fromMillisecondsSinceEpoch(this)
-          .toUtc()
-          .fixTimeZone;
+  DateTime get fromMilliDateFixed => DateTime.fromMillisecondsSinceEpoch(this).toUtc().fixTimeZone;
 
   int get countDiv2 => (this ~/ 2 < this / 2) ? this ~/ 2 + 1 : this ~/ 2;
 }
@@ -331,17 +324,12 @@ extension GlobalKeyH on GlobalKey {
   }
 }
 
-
-
 extension FirstItem<E> on Iterable<E> {
   E? get firstItem => isEmpty ? null : first;
 }
 
 extension ContextHelper on BuildContext {
-  bool get isDark =>
-      Theme
-          .of(this)
-          .brightness == Brightness.dark;
+  bool get isDark => Theme.of(this).brightness == Brightness.dark;
 }
 
 extension ThemeModeHelper on ThemeMode {
@@ -351,7 +339,6 @@ extension ThemeModeHelper on ThemeMode {
     return WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark;
   }
 }
-
 
 extension NeedUpdateEnumH on NeedUpdateEnum {
   bool get loading => this == NeedUpdateEnum.withLoading;
@@ -444,7 +431,7 @@ enum FileType {
   }
 }
 
-extension ListH<E> on List  {
+extension ListH<E> on List {
   E getOrNull(int index) {
     if (index < 0 || index >= length) return null as E;
     return this[index] as E;
