@@ -64,6 +64,10 @@ class CachingService {
     final box = await getBox(bucket);
     return box.values.toList();
   }
+  static List<String> getAllFromBucketSync({required String bucket})  {
+    final box = getBoxSync(bucket);
+    return box.values.toList();
+  }
 
   static String? getFromBucketSync({
     String? bucket,
