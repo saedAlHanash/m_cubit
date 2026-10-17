@@ -65,6 +65,11 @@ class CachingService {
     return box.values.toList();
   }
 
+  static List<String> getAllFromBucketSync({required String bucket}) {
+    final box = getBoxSync(bucket);
+    return box.values.toList();
+  }
+
   static String? getFromBucketSync({
     String? bucket,
     required String key,
@@ -72,6 +77,22 @@ class CachingService {
     final box = getBoxSync(bucket ?? _defaultBoxName);
     if (!box.isOpen) return null;
     return box.get(key);
+  }
+
+  static Future<void> removeFromBucket({
+    required String key,
+    String? bucket,
+  }) async {
+    final box = await getBox(bucket ?? _defaultBoxName);
+    await box.delete(key);
+  }
+
+  static void removeFromBucketSync({
+    required String key,
+    String? bucket,
+  }) {
+    final box = getBoxSync(bucket ?? _defaultBoxName);
+    box.delete(key);
   }
 
   static Future<void> clearBucket({required String bucket}) async {
